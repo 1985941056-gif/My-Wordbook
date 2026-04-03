@@ -555,11 +555,16 @@
             container.innerHTML = '';
             const queryLower = query.toLowerCase();
             
-            const matchedWords = appData.words.filter(w => 
-                w.word.toLowerCase().includes(queryLower) || 
-                w.meaning.toLowerCase().includes(queryLower) || 
-                (w.note && w.note.toLowerCase().includes(queryLower))
-            );
+            const matchedWords = appData.words.filter(w => {
+                const wordLower = w.word.toLowerCase();
+                // 英文单词：匹配开头，或者匹配词组中某个单词的开头（完美解决搜k出来back的问题）
+                const matchWord = wordLower.startsWith(queryLower) || wordLower.includes(' ' + queryLower);
+                // 中文释义和说明：依然保留模糊搜索（包含即可）
+                const matchMeaning = w.meaning.toLowerCase().includes(queryLower);
+                const matchNote = w.note && w.note.toLowerCase().includes(queryLower);
+                
+                return matchWord || matchMeaning || matchNote;
+            });
 
             if (matchedWords.length === 0) {
                 container.innerHTML = `
