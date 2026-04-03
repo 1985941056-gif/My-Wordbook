@@ -154,8 +154,6 @@
         .quick-search {
             display: flex;
             gap: 0.5rem;
-            margin-bottom: 2rem;
-            padding: 0 1rem;
             width: 100%;
         }
         .quick-search input {
@@ -163,14 +161,7 @@
             border-radius: 8px; font-size: 0.9rem; outline: none; background-color: #FAFAFA;
         }
         .quick-search input:focus { border-color: var(--primary-color); background-color: #FFFFFF; }
-        .quick-search button {
-            background-color: var(--text-muted); color: white; border: none;
-            padding: 0 1rem; border-radius: 8px; font-size: 0.9rem; cursor: pointer;
-            transition: background-color 0.2s;
-            white-space: nowrap;
-        }
-        .quick-search button:hover { background-color: var(--text-main); }
-
+        
         .action-buttons { display: flex; gap: 1rem; justify-content: center; width: 100%; }
         .action-buttons button {
             flex: 1; padding: 1rem; border: none; border-radius: 12px;
@@ -452,7 +443,8 @@
                 <select id="reviewListSelect" class="list-select"></select>
             </div>
             <section class="review-section" id="reviewSection">
-                </section>
+                <!-- 闪卡会生成在这里 -->
+            </section>
         </div>
 
         <div id="viewEdit" class="view-section">
@@ -470,7 +462,8 @@
             <div id="searchResults" class="search-results-list"></div>
 
             <div class="accordion-group" id="accordionGroup">
-                </div>
+                <!-- 分组列表 -->
+            </div>
         </div>
     </div>
 
@@ -493,14 +486,14 @@
         let appData = { lists: [], words: [], activeListId: 'default' };
         let expandedListId = null; // 记录当前展开的列表ID
         let currentMode = 'review'; // 'review' 或 'edit'
+        
+        // 核心：复习队列系统
+        let reviewQueue = [];
+        let currentReviewListId = null;
 
         const savedData = localStorage.getItem('vocabularyAppData');
         if (savedData) {
             appData = JSON.parse(savedData);
-            appData.words = appData.words.map(w => ({
-                ...w, level: w.level || 0, nextReviewTime: w.nextReviewTime || Date.now()
-            }));
-            saveData();
         } else {
             appData = { lists: [{ id: 'default', name: '默认列表' }], words: [], activeListId: 'default' };
             saveData();
@@ -508,7 +501,7 @@
 
         // 初始化渲染
         renderReviewSelect();
-        renderReviewCard();
+        initReviewSession();
 
         // ================= 模式切换逻辑 =================
         btnModeReview.addEventListener('click', () => switchMode('review'));
@@ -522,7 +515,13 @@
                 viewReview.classList.add('active');
                 viewEdit.classList.remove('active');
                 renderReviewSelect();
-                renderReviewCard();
+                
+                // 只有当列表改变时，才重置进度重新开始。否则保持用户之前的复习进度
+                if (currentReviewListId !== appData.activeListId) {
+                    initReviewSession();
+                } else {
+                    renderReviewCard();
+                }
             } else {
                 btnModeEdit.classList.add('active');
                 btnModeReview.classList.remove('active');
@@ -537,24 +536,23 @@
             }
         }
 
-        // ================= 全局实时搜索逻辑 =================
+        // ================= 全局实时搜索逻辑 (编辑模式) =================
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.trim();
             if (query === '') {
-                // 如果搜索框为空，隐藏搜索结果，显示正常的手风琴列表
                 searchResults.classList.remove('active');
                 accordionGroup.style.display = 'flex';
                 renderEditAccordions();
             } else {
-                // 如果有内容，隐藏手风琴列表，显示扁平化搜索结果
                 searchResults.classList.add('active');
                 accordionGroup.style.display = 'none';
-                renderSearchResults(query);
+                renderSearchResults(query, searchResults);
             }
         });
 
-        function renderSearchResults(query) {
-            searchResults.innerHTML = '';
+        // 提取通用的搜索渲染函数，方便复习模式复用
+        function renderSearchResults(query, container) {
+            container.innerHTML = '';
             const queryLower = query.toLowerCase();
             
             const matchedWords = appData.words.filter(w => 
@@ -564,10 +562,10 @@
             );
 
             if (matchedWords.length === 0) {
-                searchResults.innerHTML = `
-                    <div style="text-align:center; color:gray; padding: 2.5rem 1rem;">
+                container.innerHTML = `
+                    <div style="text-align:center; color:gray; padding: ${currentMode === 'review' ? '1rem' : '2.5rem 1rem'};">
                         没有找到匹配的单词 🥲<br><br>
-                        <button class="btn-primary" onclick="clearSearch()" style="margin-top:1rem;">清除搜索并去添加</button>
+                        ${currentMode !== 'review' ? '<button class="btn-primary" onclick="clearSearch()" style="margin-top:1rem;">清除搜索并去添加</button>' : ''}
                     </div>`;
                 return;
             }
@@ -575,15 +573,17 @@
             matchedWords.forEach(w => {
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'search-result-item';
-                // 提取单行展示所需的文字
+                // 在复习卡片里的内边距稍微紧凑一点
+                if (currentMode === 'review') itemDiv.style.padding = '0.75rem 1rem';
+                
                 const displayNote = w.note ? `<span style="font-style:italic; opacity:0.6; margin-left:0.5rem;">(${w.note.replace(/\n/g, ' ')})</span>` : '';
                 
                 itemDiv.innerHTML = `
-                    <div class="search-result-word">${w.word}</div>
-                    <div class="search-result-meaning">${w.meaning} ${displayNote}</div>
+                    <div class="search-result-word" ${currentMode === 'review' ? 'style="font-size: 1.05rem;"' : ''}>${w.word}</div>
+                    <div class="search-result-meaning" ${currentMode === 'review' ? 'style="font-size: 0.9rem;"' : ''}>${w.meaning} ${displayNote}</div>
                     <button class="delete-word-btn" onclick="deleteWord(${w.id})">×</button>
                 `;
-                searchResults.appendChild(itemDiv);
+                container.appendChild(itemDiv);
             });
         }
 
@@ -592,11 +592,11 @@
             searchInput.dispatchEvent(new Event('input'));
         };
 
-        // ================= 复习模式逻辑 =================
+        // ================= 复习模式逻辑 (队列排队系统) =================
         reviewListSelect.addEventListener('change', function(e) {
             appData.activeListId = e.target.value;
             saveData();
-            renderReviewCard();
+            initReviewSession();
         });
 
         function renderReviewSelect() {
@@ -610,8 +610,16 @@
             });
         }
 
+        // 初始化当前会话的复习队列
+        function initReviewSession() {
+            currentReviewListId = appData.activeListId;
+            const currentListWords = appData.words.filter(w => w.listId === appData.activeListId);
+            reviewQueue = [...currentListWords];
+            renderReviewCard();
+        }
+        window.initReviewSession = initReviewSession;
+
         function renderReviewCard() {
-            const now = Date.now();
             const currentListWords = appData.words.filter(w => w.listId === appData.activeListId);
             
             if (currentListWords.length === 0) {
@@ -623,37 +631,34 @@
                 return;
             }
 
-            const dueWords = currentListWords.filter(w => w.nextReviewTime <= now);
-
-            if (dueWords.length === 0) {
-                const nextWord = currentListWords.sort((a, b) => a.nextReviewTime - b.nextReviewTime)[0];
-                const minutesLeft = Math.ceil((nextWord.nextReviewTime - now) / 1000 / 60);
-                let timeMsg = minutesLeft > 60 ? `${Math.floor(minutesLeft/60)}小时后` : `${minutesLeft}分钟后`;
-
+            if (reviewQueue.length === 0) {
                 reviewSection.innerHTML = `
                     <div class="empty-state">
                         <h2>🎉 太棒了！</h2>
-                        <p>当前列表的复习任务已清空。</p>
-                        <p style="margin-top:1rem; font-size:0.9rem; color:#9CA3AF;">下一个单词将在 ${timeMsg} 出现</p>
+                        <p>当前列表的所有单词已复习完毕。</p>
+                        <button class="btn-primary" style="margin-top:1.5rem;" onclick="initReviewSession()">再复习一遍</button>
                     </div>`;
                 return;
             }
 
-            dueWords.sort((a, b) => a.nextReviewTime - b.nextReviewTime);
-            const currentWord = dueWords[0];
+            // 永远取队列的第一个元素
+            const currentWord = reviewQueue[0];
 
             reviewSection.innerHTML = `
                 <div class="flashcard" id="flashcard">
-                    <div class="status-badge">熟悉度: Lvl ${currentWord.level} | 待复习: ${dueWords.length}</div>
+                    <div class="status-badge">剩余待复习: ${reviewQueue.length} 词</div>
                     <div class="word-en-large">${currentWord.word}</div>
                     <div class="click-hint" id="clickHint">点击卡片任意位置查看释义</div>
                     <div class="flashcard-back">
                         <div class="word-zh-large" style="${currentWord.note ? 'margin-bottom: 0;' : 'margin-bottom: 1.5rem;'}">${currentWord.meaning}</div>
                         ${currentWord.note ? `<div class="word-note-large">${currentWord.note}</div>` : ''}
                         
-                        <div class="quick-search" onclick="event.stopPropagation();">
-                            <input type="text" id="quickSearchInput" placeholder="🔍 联想搜索词库中的其他单词..." autocomplete="off" onkeypress="handleQuickSearch(event)">
-                            <button onclick="triggerQuickSearch()">搜索</button>
+                        <!-- 带有下拉结果的卡片背面实时搜索 -->
+                        <div class="quick-search-wrapper" style="position: relative; width: 100%; margin-bottom: 2rem;" onclick="event.stopPropagation();">
+                            <div class="quick-search" style="margin-bottom: 0;">
+                                <input type="text" id="quickSearchInput" placeholder="🔍 实时搜索词库中的单词..." autocomplete="off" oninput="handleQuickSearchInput(event)">
+                            </div>
+                            <div id="quickSearchResults" class="search-results-list" style="position: absolute; top: 100%; left: 0; width: 100%; max-height: 220px; overflow-y: auto; z-index: 100; margin-top: 0.5rem; text-align: left; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);"></div>
                         </div>
 
                         <div class="action-buttons">
@@ -669,52 +674,37 @@
             });
         }
 
-        function handleReview(wordId, isKnown) {
-            const wordIndex = appData.words.findIndex(w => w.id === wordId);
-            if (wordIndex === -1) return;
+        // 处理复习逻辑
+        window.handleReview = function(wordId, isKnown) {
+            if (reviewQueue.length === 0 || reviewQueue[0].id !== wordId) return;
 
-            const word = appData.words[wordIndex];
-            const now = Date.now();
+            // 把当前单词从队首拿出来
+            const currentWord = reviewQueue.shift();
 
-            if (isKnown) {
-                word.level += 1;
-                word.nextReviewTime = now + (word.level * 12 * 60 * 60 * 1000);
-            } else {
-                word.level = 0;
-                word.nextReviewTime = now + (5 * 60 * 1000);
+            if (!isKnown) {
+                // 如果不认识，把它重新塞回队伍的最后面
+                reviewQueue.push(currentWord);
             }
 
-            appData.words[wordIndex] = word;
-            saveData();
             renderReviewCard();
-        }
-
-        // ================= 复习模式卡片背面快速搜索 =================
-        window.handleQuickSearch = function(e) {
-            if (e.key === 'Enter') {
-                e.stopPropagation();
-                triggerQuickSearch();
-            }
         };
 
-        window.triggerQuickSearch = function() {
-            const input = document.getElementById('quickSearchInput');
-            if (input && input.value.trim() !== '') {
-                const query = input.value.trim();
-                // 切换到编辑模式
-                switchMode('edit');
-                // 填充全局搜索框并触发搜索以展示扁平化词典列表
-                const mainSearch = document.getElementById('searchInput');
-                mainSearch.value = query;
-                mainSearch.dispatchEvent(new Event('input'));
-            } else {
-                showToast('请输入要搜索的内容！');
+        // ================= 复习模式卡片背面快速下拉搜索 =================
+        window.handleQuickSearchInput = function(e) {
+            const query = e.target.value.trim();
+            const resultsContainer = document.getElementById('quickSearchResults');
+            
+            if (query === '') {
+                resultsContainer.classList.remove('active');
+                return;
             }
+
+            renderSearchResults(query, resultsContainer);
+            resultsContainer.classList.add('active');
         };
 
         // ================= 编辑模式分组管理逻辑 =================
         
-        // 1. 新建分组
         newListBtn.addEventListener('click', function() {
             const listName = prompt('请输入新分组的名称：');
             if (listName && listName.trim() !== '') {
@@ -722,12 +712,11 @@
                 appData.lists.push(newList);
                 expandedListId = newList.id; // 新建后自动展开
                 saveData();
-                clearSearch(); // 新建分组后清空搜索并返回手风琴视图
+                clearSearch(); 
                 showToast('分组创建成功！');
             }
         });
 
-        // 2. 渲染常规手风琴分组列表 (无搜索时调用)
         function renderEditAccordions() {
             accordionGroup.innerHTML = '';
             
@@ -780,26 +769,24 @@
             });
         }
 
-        // 3. 手风琴展开/收起控制
         window.toggleAccordion = function(listId) {
             if (expandedListId === listId) {
-                expandedListId = null; // 再次点击收起
+                expandedListId = null;
             } else {
-                expandedListId = listId; // 展开新点击的
+                expandedListId = listId;
             }
             renderEditAccordions();
         };
 
-        // 4. 删除列表
         window.deleteList = function(listId) {
             if (appData.lists.length <= 1) return showToast('至少需要保留一个分组哦！');
             if (confirm('确定要删除该分组及其中所有单词吗？')) {
                 appData.lists = appData.lists.filter(l => l.id !== listId);
                 appData.words = appData.words.filter(w => w.listId !== listId);
                 
-                // 如果删除的是复习模式下选中的列表，将活动列表重置为剩下的第一个
                 if (appData.activeListId === listId) {
                     appData.activeListId = appData.lists[0].id;
+                    currentReviewListId = null; // 强制复习模式重置队列
                 }
                 if (expandedListId === listId) expandedListId = null;
 
@@ -809,7 +796,6 @@
             }
         };
 
-        // 5. 添加单词
         window.addWordToList = function(listId) {
             const enInput = document.getElementById(`add_en_${listId}`);
             const zhInput = document.getElementById(`add_zh_${listId}`);
@@ -821,44 +807,67 @@
 
             if (!enWord || !zhMeaning) return showToast('请完整填写英文和释义！');
 
-            appData.words.push({
+            const newWord = {
                 id: Date.now(),
                 listId: listId,
                 word: enWord,
                 meaning: zhMeaning,
-                note: noteText, // 记录说明
-                level: 0,
-                nextReviewTime: Date.now()
-            });
+                note: noteText
+            };
+            appData.words.push(newWord);
+            
+            // 如果我们恰好正在复习这个列表，将新单词加入队列末尾
+            if (listId === currentReviewListId) {
+                reviewQueue.push(newWord);
+            }
             
             saveData();
-            renderEditAccordions(); // 重新渲染更新词数和列表
+            renderEditAccordions();
             
-            // 重新获取焦点，方便连续输入
             setTimeout(() => {
                 const newEnInput = document.getElementById(`add_en_${listId}`);
                 if (newEnInput) newEnInput.focus();
             }, 0);
         };
 
-        // 支持在“中文释义”输入框按回车快速添加（说明会留空）
         window.handleEnter = function(e, listId) {
             if (e.key === 'Enter') addWordToList(listId);
         }
 
-        // 6. 删除单词（同时支持在“扁平搜索结果”和“分组列表”中删除）
+        // ================= 全局删除逻辑 (兼容多种视图) =================
         window.deleteWord = function(wordId) {
             if (confirm('确定要从列表中移除这个单词吗？')) {
+                // 1. 从总词库中删除
                 appData.words = appData.words.filter(w => w.id !== wordId);
+                
+                // 2. 检查是否删除了正在复习的“当前卡片”词汇
+                const isDeletingCurrentReviewWord = currentMode === 'review' && reviewQueue.length > 0 && reviewQueue[0].id === wordId;
+                
+                // 3. 从复习队列中彻底移除
+                reviewQueue = reviewQueue.filter(w => w.id !== wordId); 
                 saveData();
                 
-                const query = searchInput.value.trim();
-                if (query !== '') {
-                    // 如果正在搜索视图中删除，静默更新后台手风琴并刷新搜索视图
-                    renderSearchResults(query);
-                    renderEditAccordions();
+                // 4. 根据所处模式更新界面
+                if (currentMode === 'review') {
+                    if (isDeletingCurrentReviewWord) {
+                        // 删除了正在看的词，卡片必须跳到下一个
+                        renderReviewCard();
+                    } else {
+                        // 只是删了下拉列表里的其他词，重新渲染卡片上的下拉结果
+                        const quickInput = document.getElementById('quickSearchInput');
+                        if (quickInput && quickInput.value.trim() !== '') {
+                            quickInput.dispatchEvent(new Event('input'));
+                        }
+                    }
                 } else {
-                    renderEditAccordions();
+                    // 编辑模式下的删除视图刷新
+                    const query = searchInput.value.trim();
+                    if (query !== '') {
+                        renderSearchResults(query, searchResults);
+                        renderEditAccordions();
+                    } else {
+                        renderEditAccordions();
+                    }
                 }
             }
         };
