@@ -580,8 +580,8 @@
                     
                     const list = document.getElementById('presenceList');
                     
-                    // 【优化】：过滤出真正在线的人，隐藏因为断网/强退导致的陈旧离线记录
-                    const activeUsers = resRoom.results.filter(d => (now - d.lastActive) < 35000);
+                    // 【优化】：过滤出真正在线的人，隐藏因为断网/强退导致的陈旧离线记录 (超时2秒隐藏)
+                    const activeUsers = resRoom.results.filter(d => (now - d.lastActive) < 2000);
                     
                     const html = activeUsers.map(d => {
                         return `<div class="user-presence"><span class="status-dot online"></span>${d.nick}</div>`;
@@ -595,7 +595,7 @@
 
             heartbeat();
             if (presenceTimer) clearInterval(presenceTimer);
-            presenceTimer = setInterval(heartbeat, 10000); // 每 10 秒刷新一次人员列表
+            presenceTimer = setInterval(heartbeat, 1000); // 每 1 秒刷新一次人员列表，确保 2 秒超时机制正常工作
         }
 
         // =====================================================================
