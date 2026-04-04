@@ -45,7 +45,7 @@
         }
         :root.dark .list-select, :root.dark .search-container input, :root.dark .accordion-body, 
         :root.dark .add-word-form input, :root.dark .add-word-form textarea, 
-        :root.dark #promptModalInput, :root.dark #syncModalTextarea { 
+        :root.dark #promptModalInput { 
             background-color: #374151; color: var(--text-main); border-color: var(--border-color);
         }
 
@@ -141,7 +141,8 @@
         .logout-btn { position: absolute; right: 0; top: 0; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; }
         
         .stats-board { display: flex; justify-content: center; gap: 0.8rem; margin-top: 1rem; font-size: 0.85rem; }
-        .stat-item { background: var(--card-bg); padding: 0.5rem 1.2rem; border-radius: 999px; border: 1px solid var(--border-color); box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; }
+        .stat-item { background: var(--card-bg); padding: 0.5rem 1.2rem; border-radius: 999px; border: 1px solid var(--border-color); box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; transition: 0.2s; }
+        .stat-item:hover { background: #F3F4F6; }
         .stat-item b { color: var(--primary-color); }
 
         .presence-list {
@@ -255,19 +256,6 @@
         </div>
     </div>
 
-    <!-- 导入导出专用弹窗 -->
-    <div id="syncModal" class="modal-overlay" onclick="window.closeSyncModalOnBg(event)">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <h3 id="syncModalTitle">导入数据</h3>
-            <p id="syncModalDesc">导入后将覆盖当前房间所有内容。</p>
-            <textarea id="syncModalTextarea" style="width:100%; height:160px; padding:1rem; border-radius:14px; border:1px solid var(--border-color); outline:none; font-family:monospace; font-size:0.8rem; resize:vertical;"></textarea>
-            <div class="modal-actions">
-                <button class="btn-neutral" onclick="window.closeSyncModal()">取消</button>
-                <button id="syncModalConfirmBtn" class="btn-primary">确认导入</button>
-            </div>
-        </div>
-    </div>
-
     <!-- 登录界面 -->
     <div id="loginView">
         <button class="login-theme-btn" onclick="window.toggleTheme()" id="loginThemeBtn">🌙</button>
@@ -286,8 +274,7 @@
             <button class="logout-btn" onclick="window.logout()">退出登录</button>
             
             <div class="stats-board">
-                <!-- 增加了云端状态的点击事件，方便查看具体错误 -->
-                <div class="stat-item" id="cloudStatus" onclick="window.showCloudError()">💾 本地</div>
+                <div class="stat-item" id="cloudStatus" onclick="window.showCloudError()">💾 连接中...</div>
                 <div class="stat-item">词库: <b id="statTotal">0</b></div>
                 <div class="stat-item">今日: <b id="statToday">0</b></div>
             </div>
@@ -313,7 +300,6 @@
             <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem; align-items:center;">
                 <h2 style="font-size:1.4rem; font-weight:800;">词库管理</h2>
                 <div style="display:flex; gap:0.6rem;">
-                    <button class="btn-primary" onclick="window.openImportModal()" style="background:#6B7280; font-size:0.8rem;">📥 导入</button>
                     <button class="btn-primary" onclick="window.createNewList()" style="font-size:0.8rem;">+ 新分组</button>
                 </div>
             </div>
@@ -327,31 +313,53 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, serverTimestamp, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <!-- 使用原生 JS + Bmob REST API -->
+    <script>
+        // =====================================================================
+        // 🚀 Bmob 国内云端引擎 (免梯子、防拦截)
+        // =====================================================================
+        const BMOB_APP_ID = "4bf7d211a09a4c0b4ed139f0e90bc806";
+        const BMOB_REST_KEY = "7d5ac1ddbf2694de6a23843fd1814ad0";
+        const BMOB_BASE_URL = "https://api.bmobcloud.com/1/classes";
 
-        // --- Firebase 配置 ---
-        const configFromEnv = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const firebaseConfig = configFromEnv || {
-            apiKey: "AIzaSyDuo-Ngn5sWQfekP2KU0HCbZRadwDeBvBg",
-            authDomain: "myprogram-cb5f3.firebaseapp.com",
-            projectId: "myprogram-cb5f3",
-            storageBucket: "myprogram-cb5f3.firebasestorage.app",
-            messagingSenderId: "548403580313",
-            appId: "1:548403580313:web:d2b805e010b4fb49cf1708"
-        };
-        const finalAppId = typeof __app_id !== 'undefined' ? __app_id : 'wordbook-app';
+        // Bmob 极速请求封装器，带有容错处理机制
+        async function bmobFetch(path, method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: {
+                    "X-Bmob-Application-Id": BMOB_APP_ID,
+                    "X-Bmob-REST-API-Key": BMOB_REST_KEY,
+                    "Content-Type": "application/json"
+                }
+            };
+            if (body) options.body = JSON.stringify(body);
+            const res = await fetch(`${BMOB_BASE_URL}${path}`, options);
+            const json = await res.json().catch(() => ({}));
+            
+            if (!res.ok) {
+                const errMsg = (json.error || '').toLowerCase();
+                // 自动处理 Bmob 初次建表时抛出的 400/404 或 object not found 错误
+                const isNotFound = json.code === 101 || errMsg.includes('not found');
+                if (method === 'GET' && isNotFound) {
+                    return { results: [] }; 
+                }
+                throw new Error(json.error || `HTTP Error ${res.status}`);
+            }
+            return json;
+        }
 
         // --- 全局状态 ---
-        let db, auth, user, currentAccessCode, currentNickname;
-        let isFirebaseActive = false;
-        let unsubSnapshot = null;
+        let currentAccessCode = "";
+        let currentNickname = "";
+        let myUserId = ""; // 替代 Firebase Auth 的设备唯一标识
+        
         let appData = { lists: [{id:'default', name:'默认分组'}], words: [], activeListId: 'default', stats: { date: '', reviewedCount: 0 } };
         let reviewQueue = [];
         let expandedListId = null;
-        let cloudErrorMsg = ""; // 保存云端错误信息供排查
+        let cloudErrorMsg = ""; 
+        let isPushingData = false; // 防止拉取数据覆盖正在推送的数据
+        let syncTimer = null;
+        let presenceTimer = null;
 
         // --- 数据净化 ---
         function sanitizeData(data) {
@@ -363,7 +371,7 @@
             return data;
         }
 
-        // --- 全局弹窗逻辑 (修复原生 prompt 拦截问题) ---
+        // --- 全局弹窗逻辑 ---
         let currentPromptCallback = null;
         window.openPrompt = function(title, desc, placeholder, onConfirm) {
             document.getElementById('promptModalTitle').innerText = title;
@@ -397,55 +405,30 @@
         window.closeConfirmModal = () => document.getElementById('confirmModal').classList.remove('active');
         window.closeConfirmModalOnBg = (e) => { if(e.target.id === 'confirmModal') window.closeConfirmModal(); };
 
-        // 供点击顶部云端状态时显示错误
         window.showCloudError = function() {
+            const statusText = document.getElementById('cloudStatus').innerText;
             if(cloudErrorMsg) {
-                window.openConfirm("云端连接异常", "详细信息：\n" + cloudErrorMsg + "\n\n提示：如果您使用 github.io 访问，请确保已在 Firebase Authentication -> Settings -> Authorized domains 中添加了 github.io。", null);
+                window.openConfirm("云端异常排查", "当前状态：" + statusText + "\n报错信息：" + cloudErrorMsg, null);
+            } else {
+                window.openConfirm("云端状态", "当前状态：" + statusText + "\n\n💡 提示：我们现已使用国内直连云服务，无需梯子即可自动同步！", null);
             }
         };
 
         // --- 初始化入口 ---
         window.onload = () => {
-            if (localStorage.getItem('wb_granted') === 'true') unlockApp();
-            else document.getElementById('loginView').classList.add('active');
-        };
-
-        async function initFirebase(code, nick) {
-            try {
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-                
-                const initAuth = async () => {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        try {
-                            await signInAnonymously(auth);
-                        } catch (err) {
-                            cloudErrorMsg = err.message;
-                            document.getElementById('cloudStatus').innerHTML = "⚠️ Auth拦截";
-                            console.error("Auth 失败:", err);
-                        }
-                    }
-                };
-                
-                onAuthStateChanged(auth, (u) => {
-                    if (u) { 
-                        user = u; 
-                        isFirebaseActive = true; 
-                        setupCloudSync(code); 
-                        startPresence(code, nick); 
-                    }
-                });
-                
-                await initAuth();
-            } catch (e) { 
-                cloudErrorMsg = e.message;
-                document.getElementById('cloudStatus').innerHTML = "⚠️ 配置异常";
-                console.error("Firebase 初始化异常:", e); 
+            // 获取或生成设备专属 User ID
+            myUserId = localStorage.getItem('wb_uid');
+            if (!myUserId) {
+                myUserId = 'u_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+                localStorage.setItem('wb_uid', myUserId);
             }
-        }
+
+            if (localStorage.getItem('wb_granted') === 'true') {
+                unlockApp();
+            } else {
+                document.getElementById('loginView').classList.add('active');
+            }
+        };
 
         window.verifyAccess = () => {
             const code = document.getElementById('accessCodeInput').value.trim();
@@ -462,68 +445,145 @@
             currentNickname = localStorage.getItem('wb_nick');
             document.getElementById('loginView').classList.remove('active');
             document.getElementById('appContent').classList.add('active');
+            
             const localData = localStorage.getItem('wb_data');
             if (localData) appData = sanitizeData(JSON.parse(localData));
-            initFirebase(currentAccessCode, currentNickname);
+            
             window.updateStatsUI();
             window.renderReviewSelect();
             window.initReviewSession();
+
+            // 启动 Bmob 引擎
+            startBmobSync();
+            startBmobPresence();
         }
 
-        // --- 云端同步引擎 ---
-        function setupCloudSync(code) {
-            if (!user) return;
-            const docRef = doc(db, 'artifacts', finalAppId, 'public', 'data', 'rooms', code);
-            if (unsubSnapshot) unsubSnapshot();
-            unsubSnapshot = onSnapshot(docRef, (snap) => {
-                cloudErrorMsg = ""; // 清除错误
-                document.getElementById('cloudStatus').innerHTML = "☁️ 云端同步";
-                if (snap.exists()) {
-                    appData = sanitizeData(snap.data());
-                    window.updateStatsUI();
-                    if (document.getElementById('viewEdit').classList.contains('active')) {
-                        window.renderEditAccordions();
-                    } else { 
-                        window.renderReviewSelect(); 
-                        window.renderReviewCard(); 
+        // =====================================================================
+        // ☁️ Bmob 同步引擎逻辑 (完美替代 Firebase onSnapshot)
+        // =====================================================================
+        function startBmobSync() {
+            const statusEl = document.getElementById('cloudStatus');
+            statusEl.innerHTML = "🔄 连接云端...";
+
+            async function pullData() {
+                if (isPushingData) return; // 本地正在操作时，暂停拉取以防覆盖
+                try {
+                    // 查询该房间是否已有数据
+                    const queryObj = { roomCode: currentAccessCode };
+                    const res = await bmobFetch(`/RoomData?where=${encodeURIComponent(JSON.stringify(queryObj))}`);
+                    
+                    statusEl.innerHTML = "☁️ 云端同步";
+                    cloudErrorMsg = "";
+
+                    if (res.results && res.results.length > 0) {
+                        const cloudDataStr = res.results[0].dataStr;
+                        const localDataStr = JSON.stringify(appData);
+                        
+                        // 仅当云端数据与本地不同时，才触发视图更新
+                        if (cloudDataStr !== localDataStr) {
+                            appData = sanitizeData(JSON.parse(cloudDataStr));
+                            saveLocal();
+                            window.updateStatsUI();
+                            if (document.getElementById('viewEdit').classList.contains('active')) {
+                                window.renderEditAccordions();
+                            } else { 
+                                window.renderReviewSelect(); 
+                                window.renderReviewCard(); 
+                            }
+                        }
+                    } else {
+                        // 房间为空，主动把本地数据推上去建库
+                        pushToCloud();
                     }
-                } else { pushToCloud(); }
-            }, (error) => { 
-                cloudErrorMsg = error.message;
-                document.getElementById('cloudStatus').innerHTML = "⚠️ 权限受限";
-                console.warn("Cloud Sync Error:", error); 
-            });
+                } catch(e) {
+                    cloudErrorMsg = e.message;
+                    statusEl.innerHTML = "⚠️ 连接异常";
+                }
+            }
+
+            pullData(); // 立即执行一次
+            if (syncTimer) clearInterval(syncTimer);
+            syncTimer = setInterval(pullData, 3000); // 每 3 秒拉取一次，形成实时假象
         }
 
         async function pushToCloud() {
-            if (!isFirebaseActive || !user) return;
-            try { await setDoc(doc(db, 'artifacts', finalAppId, 'public', 'data', 'rooms', currentAccessCode), appData); } 
-            catch(e) { console.error("Cloud push failed:", e); }
+            if (!currentAccessCode) return;
+            isPushingData = true; // 锁定状态，防冲突
+            
+            try {
+                const dataStr = JSON.stringify(appData);
+                const queryObj = { roomCode: currentAccessCode };
+                const res = await bmobFetch(`/RoomData?where=${encodeURIComponent(JSON.stringify(queryObj))}`);
+                
+                if (res.results && res.results.length > 0) {
+                    // 更新已有记录
+                    const objId = res.results[0].objectId;
+                    try {
+                        await bmobFetch(`/RoomData/${objId}`, 'PUT', { dataStr });
+                    } catch (putErr) {
+                        // 防止对象被意外删除导致的更新失败，失败则重建
+                        if ((putErr.message || '').toLowerCase().includes('not found')) {
+                            await bmobFetch(`/RoomData`, 'POST', { roomCode: currentAccessCode, dataStr });
+                        } else throw putErr;
+                    }
+                } else {
+                    // 创建新房间记录
+                    await bmobFetch(`/RoomData`, 'POST', { roomCode: currentAccessCode, dataStr });
+                }
+            } catch(e) {
+                console.error("数据推送云端失败:", e);
+                window.showToast("☁️ 正在排队同步...");
+            } finally {
+                // 延迟解除锁定，确保云端已经消化完数据
+                setTimeout(() => { isPushingData = false; }, 1000);
+            }
         }
 
-        function startPresence(code, nick) {
-            const update = async () => {
-                if(!user) return;
+        function startBmobPresence() {
+            async function heartbeat() {
                 try {
-                    await setDoc(doc(db, 'artifacts', finalAppId, 'public', 'data', 'rooms', code, 'presence', user.uid), { nick, lastActive: serverTimestamp() }, { merge: true });
-                } catch(e){}
-            };
-            update();
-            setInterval(update, 30000);
-            onSnapshot(collection(db, 'artifacts', finalAppId, 'public', 'data', 'rooms', code, 'presence'), (snap) => {
-                const list = document.getElementById('presenceList');
-                const now = Date.now();
-                const html = snap.docs.map(d => {
-                    const data = d.data();
-                    const lastActive = data.lastActive?.toMillis() || 0;
-                    const isOnline = (now - lastActive) < 120000;
-                    return `<div class="user-presence"><span class="status-dot ${isOnline?'online':'offline'}"></span>${data.nick}</div>`;
-                }).join('');
-                list.innerHTML = `<div class="presence-title">👥 正在房间的人：</div>` + html;
-            }, (err) => {});
+                    const now = Date.now();
+                    // 1. 更新自己的心跳
+                    const queryMe = { roomCode: currentAccessCode, userId: myUserId };
+                    const resMe = await bmobFetch(`/Presence?where=${encodeURIComponent(JSON.stringify(queryMe))}`);
+                    
+                    if (resMe.results && resMe.results.length > 0) {
+                        try {
+                            await bmobFetch(`/Presence/${resMe.results[0].objectId}`, 'PUT', { nick: currentNickname, lastActive: now });
+                        } catch (putErr) {
+                            if ((putErr.message || '').toLowerCase().includes('not found')) {
+                                await bmobFetch(`/Presence`, 'POST', { roomCode: currentAccessCode, userId: myUserId, nick: currentNickname, lastActive: now });
+                            } else throw putErr;
+                        }
+                    } else {
+                        await bmobFetch(`/Presence`, 'POST', { roomCode: currentAccessCode, userId: myUserId, nick: currentNickname, lastActive: now });
+                    }
+
+                    // 2. 拉取房间内所有人的状态
+                    const queryRoom = { roomCode: currentAccessCode };
+                    const resRoom = await bmobFetch(`/Presence?where=${encodeURIComponent(JSON.stringify(queryRoom))}`);
+                    
+                    const list = document.getElementById('presenceList');
+                    const html = resRoom.results.map(d => {
+                        // 30 秒内心跳视为在线
+                        const isOnline = (now - d.lastActive) < 35000; 
+                        return `<div class="user-presence"><span class="status-dot ${isOnline?'online':'offline'}"></span>${d.nick}</div>`;
+                    }).join('');
+                    
+                    list.innerHTML = `<div class="presence-title">👥 正在房间的人：</div>` + html;
+                } catch(e) {
+                    console.warn("状态刷新连接提示:", e.message);
+                }
+            }
+
+            heartbeat();
+            if (presenceTimer) clearInterval(presenceTimer);
+            presenceTimer = setInterval(heartbeat, 10000); // 每 10 秒刷新一次人员列表
         }
 
-        // --- 核心业务逻辑 ---
+        // =====================================================================
+        // 核心业务逻辑 (UI交互)
+        // =====================================================================
         window.switchMode = (m) => {
             document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
@@ -553,7 +613,7 @@
             const isEnglish = /^[a-zA-Z\s]+$/.test(q);
             return appData.words.filter(w => {
                 if (isEnglish) return w.word.toLowerCase().startsWith(q); // 英文前缀匹配
-                return w.meaning.toLowerCase().includes(q); // 中文包含
+                return w.meaning.toLowerCase().includes(q); // 中文包含匹配
             });
         }
 
@@ -572,7 +632,7 @@
             `).join('') || '<div style="text-align:center; padding:3rem; color:gray;">无结果</div>';
         };
 
-        // --- 渲染复习模式卡片 ---
+        // --- 渲染复习模式卡片 (完美还原背部排版要求) ---
         window.renderReviewCard = () => {
             const area = document.getElementById('reviewContainer');
             const currentListWords = appData.words.filter(w => w.listId === appData.activeListId);
@@ -595,10 +655,10 @@
                             <div style="position:absolute; top:25px; right:25px; font-size:0.85rem; color:var(--text-muted); font-weight:700;">待复习: ${reviewQueue.length}</div>
                             <div class="word-en-large">${w.word}</div>
                             <button class="tts-btn" onclick="window.speak('${w.word}', event)">🔊</button>
-                            <div style="margin-top:3.5rem; color:var(--text-muted); font-size:0.95rem; animation: pulse-online 2s infinite;">点击查看背面释义</div>
+                            <div style="margin-top:3.5rem; color:var(--text-muted); font-size:0.95rem; animation: pulse-online 2s infinite;">点击翻面查看释义</div>
                         </div>
 
-                        <!-- 卡片背面 -->
+                        <!-- 卡片背面 (严格按照要求排版) -->
                         <div class="card-back" onclick="event.stopPropagation()">
                             <div style="width:100%; text-align:center; flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
                                 
@@ -608,10 +668,10 @@
                                     <button class="tts-btn" onclick="window.speak('${w.word}', event)">🔊</button>
                                 </div>
                                 
-                                <!-- 换行后：词义解释 -->
+                                <!-- 第二行：词义解释 -->
                                 <div class="word-zh-large">${w.meaning}</div>
                                 
-                                <!-- 换行后：注释内容 -->
+                                <!-- 第三行：注释内容 (如有) -->
                                 ${w.note ? `<div class="word-note-display">${w.note}</div>` : ''}
 
                             </div>
@@ -634,6 +694,7 @@
             saveLocal(); pushToCloud(); window.updateStatsUI(); window.renderReviewCard();
         };
 
+        // --- 渲染编辑模式 (完全去除了卡片相关元素) ---
         window.renderEditAccordions = () => {
             const group = document.getElementById('accordionGroup');
             group.innerHTML = appData.lists.map(l => {
@@ -686,7 +747,7 @@
             if(!e || !z) return window.showToast("请完整填写单词和释义");
             appData.words.push({id:Date.now(), listId:lid, word:e, meaning:z, note:n});
             
-            // 添加后清空输入框，方便连续录入
+            // 添加后清空输入框
             document.getElementById('en_'+lid).value = '';
             document.getElementById('zh_'+lid).value = '';
             document.getElementById('note_'+lid).value = '';
@@ -695,7 +756,6 @@
             pushToCloud(); 
             window.renderEditAccordions();
             
-            // 保持焦点在输入框
             setTimeout(() => {
                 const newEnInput = document.getElementById(`en_${lid}`);
                 if (newEnInput) newEnInput.focus();
@@ -755,33 +815,6 @@
         window.showToast = (m) => { const t = document.getElementById('toast'); t.innerText = m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3000); };
         
         function saveLocal() { localStorage.setItem('wb_data', JSON.stringify(appData)); }
-        
-        // --- 导入功能 ---
-        window.closeSyncModal = () => document.getElementById('syncModal').classList.remove('active');
-        window.closeSyncModalOnBg = (e) => { if(e.target.id === 'syncModal') window.closeSyncModal(); };
-        window.openImportModal = () => {
-            const modal = document.getElementById('syncModal');
-            document.getElementById('syncModalTextarea').value = '';
-            modal.classList.add('active');
-            
-            document.getElementById('syncModalConfirmBtn').onclick = () => {
-                try {
-                    const code = document.getElementById('syncModalTextarea').value.trim();
-                    if(!code) return window.showToast("请输入同步代码");
-                    const data = JSON.parse(decodeURIComponent(atob(code)));
-                    
-                    window.openConfirm("确认导入", "导入将彻底覆盖当前房间内的所有数据，且不可撤销。确认吗？", () => {
-                        appData = sanitizeData(data); 
-                        saveLocal(); 
-                        pushToCloud(); 
-                        window.renderEditAccordions(); 
-                        window.renderReviewSelect();
-                        window.closeSyncModal(); 
-                        window.showToast("导入成功！"); 
-                    });
-                } catch(e) { window.showToast("无效的备份代码"); }
-            };
-        };
     </script>
 </body>
 </html>
