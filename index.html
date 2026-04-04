@@ -20,11 +20,7 @@
             --border-color: #E5E7EB;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -37,7 +33,7 @@
             min-height: 100vh;
         }
 
-        /* ================= 深色模式与TTS样式 ================= */
+        /* ================= 深色模式 ================= */
         :root.dark {
             --primary-color: #818CF8;
             --primary-hover: #6366F1;
@@ -47,382 +43,242 @@
             --text-muted: #9CA3AF;
             --border-color: #374151;
         }
-        :root.dark .list-select, :root.dark .quick-search input, :root.dark .accordion-body, 
-        :root.dark .modal-content textarea, :root.dark .add-word-form input, 
-        :root.dark .add-word-form textarea, :root.dark .search-container input { 
+        :root.dark .list-select, :root.dark .search-container input, :root.dark .accordion-body, 
+        :root.dark .add-word-form input, :root.dark .add-word-form textarea, 
+        :root.dark #promptModalInput { 
             background-color: #374151; color: var(--text-main); border-color: var(--border-color);
         }
-        :root.dark .quick-search input:focus, :root.dark .search-container input:focus, 
-        :root.dark .add-word-form input:focus, :root.dark .add-word-form textarea:focus { 
-            background-color: var(--card-bg); 
-        }
-        :root.dark .search-result-item:hover, :root.dark .accordion-header:hover, 
-        :root.dark .btn-neutral:hover, :root.dark .edit-word-item { 
-            background-color: #374151; 
-        }
-        :root.dark .btn-danger-outline { background-color: transparent; border-color: var(--danger-color); color: var(--danger-color); }
-        :root.dark .btn-danger-outline:hover { background-color: #451a1a; }
-        :root.dark .mode-toggle { background-color: var(--bg-color); }
 
-        .theme-btn {
-            position: absolute; left: 80px; top: 50%; transform: translateY(-50%);
+        .theme-btn, .login-theme-btn {
             background: transparent; border: none; font-size: 1.2rem; cursor: pointer;
-            padding: 0.5rem; transition: transform 0.2s; display: flex; align-items: center;
+            padding: 0.5rem; transition: transform 0.2s;
         }
-        .theme-btn:hover { transform: translateY(-50%) scale(1.1); }
-        
-        .login-theme-btn {
-            position: absolute; top: 1.2rem; left: 1.2rem; background: transparent;
-            border: none; font-size: 1.2rem; cursor: pointer; transition: transform 0.2s;
-        }
-        .login-theme-btn:hover { transform: scale(1.1); }
+        .theme-btn:hover, .login-theme-btn:hover { transform: scale(1.1); }
 
+        /* ================= 喇叭动画 ================= */
         .tts-btn {
             background: transparent; border: none; font-size: 1.8rem; cursor: pointer;
-            padding: 0; color: var(--primary-color); opacity: 0.7; transition: opacity 0.2s, transform 0.2s;
-            display: inline-block;
+            padding: 0; color: var(--primary-color); opacity: 0.7; transition: all 0.2s;
+            display: inline-flex; align-items: center; justify-content: center;
         }
-        .tts-btn:hover { opacity: 1; transform: scale(1.1); }
-
-        /* 喇叭播放时的动态动画 */
-        @keyframes soundWave {
+        
+        @keyframes speaker-pulse {
             0% { transform: scale(1); opacity: 0.7; }
-            50% { transform: scale(1.25); opacity: 1; text-shadow: 0 0 12px var(--primary-color); }
+            50% { transform: scale(1.2); opacity: 1; text-shadow: 0 0 10px var(--primary-color); }
             100% { transform: scale(1); opacity: 0.7; }
         }
         
         .tts-btn.playing {
-            animation: soundWave 0.8s infinite ease-in-out;
+            animation: speaker-pulse 0.6s infinite ease-in-out;
             color: var(--primary-hover);
             opacity: 1;
         }
 
-        /* ================= 登录界面样式 ================= */
-        #loginView {
-            display: none; 
-            flex-direction: column;
-            gap: 1.5rem;
+        /* ================= 3D 翻转卡片 ================= */
+        .flip-container {
+            perspective: 1000px;
             width: 100%;
-            max-width: 360px;
-            background-color: var(--card-bg);
-            padding: 3rem 2rem;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            margin-top: 10vh;
-            animation: fadeIn 0.5s ease;
-            position: relative;
+            max-width: 500px;
+            margin: 0 auto;
         }
 
-        #loginView.active {
+        .card-flipper {
+            position: relative;
+            width: 100%;
+            min-height: 440px;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .card-flipper.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 28px;
+            background: var(--card-bg);
+            padding: 2.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
             display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 1px solid var(--border-color);
         }
 
-        .login-help-btn {
-            position: absolute; top: 1.2rem; right: 1.2rem; background: transparent;
-            border: none; color: var(--text-muted); font-size: 0.9rem; cursor: pointer;
-            transition: color 0.2s; display: flex; align-items: center; gap: 0.2rem;
-        }
-        .login-help-btn:hover { color: var(--primary-color); }
+        .card-front { justify-content: center; }
+        .card-back { transform: rotateY(180deg); justify-content: space-between; }
 
-        .login-title { font-size: 1.8rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; }
-        .login-desc { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1rem; }
-        
+        /* ================= 登录界面 ================= */
+        #loginView {
+            display: none; flex-direction: column; gap: 1.2rem;
+            width: 100%; max-width: 360px; background-color: var(--card-bg);
+            padding: 3.5rem 2rem; border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+            text-align: center; margin-top: 10vh; animation: fadeIn 0.5s ease;
+        }
+        #loginView.active { display: flex; }
+        .login-title { font-size: 1.8rem; font-weight: 800; }
         .login-input {
-            width: 100%; padding: 0.8rem 1rem; border: 2px solid var(--border-color);
-            border-radius: 12px; font-size: 1.1rem; outline: none; text-align: center;
-            transition: border-color 0.2s; letter-spacing: 2px;
+            width: 100%; padding: 0.9rem; border: 2px solid var(--border-color);
+            border-radius: 14px; font-size: 1rem; text-align: center; outline: none; transition: 0.2s;
         }
-        .login-input:focus { border-color: var(--primary-color); }
-        
+        .login-input:focus { border-color: var(--primary-color); box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
         .login-btn {
-            width: 100%; padding: 0.8rem; border: none; border-radius: 12px;
+            width: 100%; padding: 1rem; border: none; border-radius: 14px;
             background-color: var(--primary-color); color: white; font-size: 1.1rem;
-            font-weight: 600; cursor: pointer; transition: background-color 0.2s;
+            font-weight: 700; cursor: pointer; transition: 0.2s;
         }
-        .login-btn:hover { background-color: var(--primary-hover); }
+        .login-btn:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
 
-        /* ================= 主应用容器 ================= */
-        #appContent {
-            display: none;
-            width: 100%;
-            max-width: 600px;
-            animation: fadeIn 0.4s ease;
-        }
-
-        #appContent.active {
-            display: block;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 1.5rem;
-            position: relative;
-        }
-
-        header h1 {
-            font-size: 2rem;
-            color: var(--text-main);
-            font-weight: 700;
-        }
-
-        .logout-btn {
-            position: absolute; right: 0; top: 50%; transform: translateY(-50%);
-            background: transparent; border: none; color: var(--text-muted);
-            font-size: 0.9rem; cursor: pointer; padding: 0.5rem; transition: color 0.2s;
-        }
-        .logout-btn:hover { color: var(--danger-color); }
-
-        .help-btn {
-            position: absolute; left: 0; top: 50%; transform: translateY(-50%);
-            background: transparent; border: none; color: var(--text-muted);
-            font-size: 0.9rem; cursor: pointer; padding: 0.5rem; transition: color 0.2s;
-            display: flex; align-items: center; gap: 0.2rem;
-        }
-        .help-btn:hover { color: var(--primary-color); }
-
-        /* 学习数据看板样式 */
-        .stats-board { 
-            display: flex; justify-content: center; gap: 1rem; 
-            margin-top: 0.8rem; font-size: 0.9rem; color: var(--text-muted); 
-            flex-wrap: wrap;
-        }
-        .stat-item { 
-            background-color: var(--card-bg); padding: 0.3rem 0.8rem; 
-            border-radius: 999px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
-            border: 1px solid var(--border-color); display: flex; 
-            align-items: center; gap: 0.3rem; 
-        }
-        .stat-item b { color: var(--primary-color); font-size: 1.05rem; }
+        /* ================= 主应用布局 ================= */
+        #appContent { display: none; width: 100%; max-width: 600px; animation: fadeIn 0.4s ease; }
+        #appContent.active { display: block; }
+        header { text-align: center; margin-bottom: 2rem; position: relative; }
+        .logout-btn { position: absolute; right: 0; top: 0; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; }
         
-        #cloudStatus { color: #10B981; font-weight: 600; }
-        #cloudStatus.offline { color: var(--text-muted); }
+        .stats-board { display: flex; justify-content: center; gap: 0.8rem; margin-top: 1rem; font-size: 0.85rem; }
+        .stat-item { background: var(--card-bg); padding: 0.5rem 1.2rem; border-radius: 999px; border: 1px solid var(--border-color); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .stat-item b { color: var(--primary-color); }
 
-        /* ================= 模式切换器等原版样式 ================= */
-        .mode-toggle {
-            display: flex; background-color: #E5E7EB; padding: 0.25rem;
-            border-radius: 12px; margin-bottom: 2rem;
+        .presence-list {
+            display: flex; justify-content: center; flex-wrap: wrap; gap: 0.6rem;
+            margin-top: 1.5rem; padding: 0.8rem; background-color: var(--card-bg);
+            border-radius: 16px; border: 1px solid var(--border-color);
         }
-        .mode-btn {
-            flex: 1; padding: 0.75rem; border: none; background: transparent;
-            border-radius: 10px; font-size: 1rem; font-weight: 600; color: var(--text-muted);
-            cursor: pointer; transition: all 0.2s ease;
-        }
-        .mode-btn.active {
-            background-color: var(--card-bg); color: var(--primary-color); box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
+        .user-presence { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; padding: 0.3rem 0.7rem; background: var(--bg-color); border-radius: 8px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .status-dot.online { background: var(--success-color); box-shadow: 0 0 8px var(--success-color); animation: pulse-online 2s infinite; }
+        .status-dot.offline { background: #9CA3AF; }
 
+        @keyframes pulse-online { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        /* --- 模式切换 --- */
+        .mode-toggle { display: flex; background: #E5E7EB; padding: 0.3rem; border-radius: 16px; margin: 2rem 0; }
+        .mode-btn { flex: 1; padding: 0.85rem; border: none; background: transparent; border-radius: 13px; cursor: pointer; font-weight: 700; transition: 0.2s; color: var(--text-muted); }
+        .mode-btn.active { background: var(--card-bg); color: var(--primary-color); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+
+        /* --- 视图区块切换 --- */
         .view-section { display: none; animation: fadeIn 0.3s ease; }
         .view-section.active { display: block; }
 
-        .list-select-container {
-            background-color: var(--card-bg); padding: 1rem 1.5rem; border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; align-items: center;
-            gap: 1rem; margin-bottom: 1rem;
+        /* --- 编辑模式 UI (完全无卡片) --- */
+        .search-container { margin-bottom: 1.5rem; position: relative; }
+        .search-container input { 
+            width: 100%; padding: 1.1rem 1.4rem; border: 1px solid var(--border-color);
+            border-radius: 20px; font-size: 1rem; outline: none; transition: 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
         }
-        .list-select-container label { font-weight: 600; white-space: nowrap; }
-        .list-select {
-            flex: 1; padding: 0.6rem; border: 1px solid var(--border-color);
-            border-radius: 8px; font-size: 1rem; outline: none; background-color: #FAFAFA; cursor: pointer;
-        }
+        .search-container input:focus { border-color: var(--primary-color); box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
 
-        .review-section { margin-top: 1rem; }
-        .flashcard {
-            background-color: var(--card-bg); border-radius: 20px; padding: 4rem 2rem;
-            text-align: center; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-            position: relative; min-height: 300px; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; cursor: pointer; transition: transform 0.2s ease; user-select: none;
-        }
-        .flashcard:active { transform: scale(0.98); }
-        .flashcard.revealed { cursor: default; }
-        .flashcard.revealed:active { transform: none; }
-
-        .word-en-large { font-size: 3rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem; }
-        .click-hint { color: var(--text-muted); font-size: 0.9rem; margin-top: 2rem; animation: pulse 2s infinite; }
-        .flashcard-back { display: none; width: 100%; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--border-color); }
-        .flashcard.revealed .flashcard-back { display: block; animation: fadeIn 0.4s ease; }
-        .flashcard.revealed .click-hint { display: none; }
+        .btn-primary { background-color: var(--primary-color); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
+        .btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
         
-        .word-zh-large { font-size: 1.5rem; color: var(--text-main); }
-        .word-note-large { font-size: 0.95rem; color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 1.5rem; white-space: pre-wrap; line-height: 1.5; }
+        .btn-neutral { background-color: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); padding: 0.6rem 1.2rem; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
+        .btn-neutral:hover { background-color: var(--border-color); }
 
-        .quick-search { display: flex; gap: 0.5rem; width: 100%; }
-        .quick-search input { flex: 1; padding: 0.6rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; outline: none; background-color: #FAFAFA; }
-        .quick-search input:focus { border-color: var(--primary-color); background-color: #FFFFFF; }
-        
-        .action-buttons { display: flex; gap: 1rem; justify-content: center; width: 100%; }
-        .action-buttons button { flex: 1; padding: 1rem; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; color: white; cursor: pointer; transition: background-color 0.2s ease; }
-        .btn-know { background-color: var(--success-color); }
-        .btn-know:hover { background-color: var(--success-hover); }
-        .btn-forgot { background-color: var(--danger-color); }
-        .btn-forgot:hover { background-color: var(--danger-hover); }
-
-        .status-badge { position: absolute; top: 1.5rem; right: 1.5rem; background-color: var(--bg-color); color: var(--text-muted); padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; }
-
-        .edit-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
-        .edit-toolbar h2 { font-size: 1.25rem; color: var(--text-main); margin: 0; }
-        .toolbar-actions { display: flex; gap: 0.5rem; }
-
-        .btn-primary { background-color: var(--primary-color); color: white; border: none; padding: 0.6rem 1rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; white-space: nowrap; }
-        .btn-primary:hover { background-color: var(--primary-hover); }
-        
-        .btn-danger-outline { background-color: #FEF2F2; color: var(--danger-color); border: 1px solid #FECACA; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; white-space: nowrap;}
-        .btn-danger-outline:hover { background-color: #FEE2E2; }
-        
-        .btn-neutral { background-color: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color); padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; white-space: nowrap; }
-        .btn-neutral:hover { background-color: #F3F4F6; }
-
-        .search-container { margin-bottom: 1.5rem; }
-        .search-container input { width: 100%; padding: 0.8rem 1rem; border: 1px solid var(--border-color); border-radius: 10px; font-size: 1rem; outline: none; transition: all 0.2s ease; background-color: var(--card-bg); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .search-container input:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
-
-        .search-results-list { display: none; background-color: var(--card-bg); border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); margin-bottom: 1rem; flex-direction: column; overflow: hidden; border: 1px solid var(--border-color); }
-        .search-results-list.active { display: flex; }
-        .search-result-item { display: flex; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); transition: background-color 0.2s; }
-        .search-result-item:last-child { border-bottom: none; }
-        .search-result-item:hover { background-color: #FAFAFA; }
-        .search-result-word { font-size: 1.15rem; font-weight: 700; color: var(--text-main); width: 35%; min-width: 100px; }
-        .search-result-meaning { font-size: 0.95rem; color: var(--text-muted); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 1rem; }
-
-        .accordion-group { display: flex; flex-direction: column; gap: 1rem; }
-        .accordion-item { background-color: var(--card-bg); border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); overflow: hidden; border: 1px solid var(--border-color); }
-        .accordion-header { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; cursor: pointer; background-color: var(--card-bg); transition: background-color 0.2s; }
-        .accordion-header:hover { background-color: #FAFAFA; }
-        .accordion-title { font-weight: 600; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; }
-        .word-count-badge { background-color: var(--bg-color); color: var(--text-muted); font-size: 0.8rem; padding: 0.2rem 0.6rem; border-radius: 999px; }
-        .accordion-body { display: none; border-top: 1px solid var(--border-color); padding: 1.5rem; background-color: #FAFAFA; }
+        .accordion-item { background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border-color); margin-bottom: 1rem; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .accordion-header { padding: 1.25rem 1.5rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .accordion-body { display: none; padding: 1.5rem; border-top: 1px solid var(--border-color); background: #FAFAFA; }
         .accordion-item.expanded .accordion-body { display: block; }
 
-        .add-word-form { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; background: var(--card-bg); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color); }
-        .input-row { display: flex; gap: 0.75rem; }
-        .add-word-form input { flex: 1; padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; outline: none; min-width: 0; }
-        .add-word-form textarea { width: 100%; padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; outline: none; resize: vertical; min-height: 70px; font-family: inherit; line-height: 1.4; }
-        .add-word-form input:focus, .add-word-form textarea:focus { border-color: var(--primary-color); }
-        .add-word-form .btn-primary { align-self: flex-end; }
+        .add-word-form { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.5rem; background: var(--card-bg); padding: 1.2rem; border-radius: 16px; border: 1px solid var(--border-color); }
+        .input-row { display: flex; gap: 0.8rem; }
+        .add-word-form input { flex: 1; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 10px; font-size: 0.95rem; outline: none; }
+        .add-word-form textarea { padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 10px; font-size: 0.9rem; outline: none; resize: vertical; min-height: 70px; font-family: inherit; }
         
-        .edit-word-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
-        .edit-word-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 1rem; background-color: var(--card-bg); border-radius: 8px; border: 1px solid var(--border-color); }
-        .edit-word-info { display: flex; flex-direction: column; gap: 0.2rem; }
-        .edit-word-en { font-weight: 700; color: var(--text-main); }
-        .edit-word-zh { font-size: 0.9rem; color: var(--text-main); }
-        .edit-word-note { font-size: 0.8rem; color: var(--text-muted); font-style: italic; white-space: pre-wrap; margin-top: 0.4rem; line-height: 1.4; }
-        .delete-word-btn { background: transparent; color: var(--text-muted); border: none; font-size: 1.2rem; cursor: pointer; padding: 0.2rem 0.5rem; border-radius: 4px; transition: all 0.2s; }
-        .delete-word-btn:hover { color: var(--danger-color); background: #FEE2E2; }
+        .edit-word-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 1rem; border-bottom: 1px solid var(--border-color); }
+        .edit-word-info b { display: block; font-size: 1.1rem; color: var(--text-main); }
+        .edit-word-info small { color: var(--text-muted); display: block; margin-top: 0.3rem; line-height: 1.4; white-space: pre-wrap; }
 
-        .empty-state { text-align: center; color: var(--text-muted); padding: 4rem 2rem; background-color: var(--card-bg); border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .empty-state h2 { color: var(--text-main); margin-bottom: 0.5rem; }
+        /* --- 复习模式卡片内容 (完全无词库管理) --- */
+        .word-en-large { font-size: 3.8rem; font-weight: 900; color: var(--text-main); }
+        .word-zh-large { font-size: 2rem; font-weight: 800; color: var(--primary-color); margin-bottom: 1rem; text-align: center; }
+        .word-note-display { font-size: 1rem; color: var(--text-muted); background: var(--bg-color); padding: 1.2rem; border-radius: 16px; line-height: 1.6; white-space: pre-wrap; width: 100%; text-align: center; margin-bottom: 1rem; }
+        
+        .action-buttons { display: flex; gap: 1.2rem; width: 100%; margin-top: 1.5rem; }
+        .action-buttons button { flex: 1; padding: 1.2rem; border: none; border-radius: 16px; color: white; font-weight: 800; cursor: pointer; transition: 0.2s; font-size: 1.05rem; }
+        .btn-know { background: var(--success-color); box-shadow: 0 4px 0 var(--success-hover); }
+        .btn-forgot { background: var(--danger-color); box-shadow: 0 4px 0 var(--danger-hover); }
+        .action-buttons button:active { transform: translateY(3px); box-shadow: none; }
 
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        .toast { position: fixed; top: 25px; left: 50%; transform: translateX(-50%) translateY(-100px); background: #111; color: white; padding: 0.9rem 1.8rem; border-radius: 99px; transition: 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28); z-index: 9999; font-weight: 600; }
+        .toast.show { transform: translateX(-50%) translateY(0); }
 
-        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background-color: var(--text-main); color: white; padding: 0.75rem 1.5rem; border-radius: 999px; font-weight: 500; opacity: 0; transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); z-index: 1000; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
-        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-
-        /* ================= 模态框样式 ================= */
+        /* ================= 统一自定义模态框 ================= */
         .modal-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2000;
-            animation: fadeIn 0.2s ease;
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); 
+            z-index: 2000; justify-content: center; align-items: center; animation: fadeIn 0.2s ease;
         }
         .modal-overlay.active { display: flex; }
         .modal-content {
-            background: var(--card-bg); padding: 1.5rem; border-radius: 16px; width: 90%; max-width: 400px;
-            display: flex; flex-direction: column; gap: 1rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            background: var(--card-bg); padding: 2rem; border-radius: 24px; 
+            width: 90%; max-width: 400px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            display: flex; flex-direction: column;
         }
-        .modal-content h3 { margin: 0; color: var(--text-main); }
-        .modal-content p { margin: 0; font-size: 0.85rem; color: var(--text-muted); }
-        .modal-content textarea {
-            width: 100%; height: 150px; padding: 0.8rem; border: 1px solid var(--border-color);
-            border-radius: 8px; font-size: 0.8rem; outline: none; resize: none; font-family: monospace;
-            background-color: #FAFAFA;
-        }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem;}
-        
-        .help-content { max-width: 500px; max-height: 85vh; overflow-y: auto; text-align: left; }
-        .help-text { display: flex; flex-direction: column; gap: 0.5rem; }
-        .help-text h4 { margin: 0.8rem 0 0.2rem 0; color: var(--text-main); font-size: 1rem; border-bottom: 2px solid #F3F4F6; padding-bottom: 0.3rem;}
-        .help-text p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; }
-        .help-text ul { margin: 0; padding-left: 1.2rem; font-size: 0.9rem; color: var(--text-muted); line-height: 1.6; }
-        .help-text b { color: var(--text-main); }
+        .modal-content h3 { font-size: 1.4rem; font-weight: 800; margin-bottom: 0.5rem; color: var(--text-main); }
+        .modal-content p { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.5; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 0.8rem; margin-top: 1rem; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
     <div id="toast" class="toast">提示信息</div>
 
-    <!-- 数据同步弹窗 (作为云同步的备选和分享代码使用) -->
-    <div id="syncModal" class="modal-overlay">
-        <div class="modal-content">
-            <h3 id="syncModalTitle">数据备份</h3>
-            <p id="syncModalDesc">描述文本</p>
-            <textarea id="syncModalTextarea"></textarea>
+    <!-- 自定义输入弹窗 -->
+    <div id="promptModal" class="modal-overlay" onclick="window.closePromptModalOnBg(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 id="promptModalTitle">提示</h3>
+            <p id="promptModalDesc"></p>
+            <input type="text" id="promptModalInput" class="login-input" style="margin-bottom: 1rem;" autocomplete="off" onkeypress="if(event.key==='Enter') window.submitPrompt()">
             <div class="modal-actions">
-                <button class="btn-neutral" onclick="window.closeSyncModal()">取消</button>
-                <button class="btn-primary" id="syncModalConfirmBtn">确认</button>
+                <button class="btn-neutral" onclick="window.closePromptModal()">取消</button>
+                <button class="btn-primary" onclick="window.submitPrompt()">确认</button>
             </div>
         </div>
     </div>
 
-    <!-- 功能说明帮助弹窗 -->
-    <div id="helpModal" class="modal-overlay" onclick="window.closeHelpModalOnBackground(event)">
-        <div class="modal-content help-content" onclick="event.stopPropagation()">
-            <h3>📖 功能说明</h3>
-            <div class="help-text">
-                <p>欢迎使用极简单词本！这是一款集成了云端同步、真人发音和深色模式的轻量级专注记词工具。</p>
-                
-                <h4>☁️ 私有词库与无感云同步</h4>
-                <p>应用受专属邀请码保护。<b>在多台设备（如手机和电脑）使用相同邀请码登录，词库与学习进度会自动实时同步</b>。断网时数据会自动保存在本地，恢复网络后自动上传。</p>
-
-                <h4>🗂️ 编辑模式 (词库管理)</h4>
-                <ul>
-                    <li><b>快速录入：</b>支持输入英文、中文释义及多行笔记。在“中文释义”框按 <code>Enter</code> 回车键即可极速连续添加。</li>
-                    <li><b>智能词典：</b>顶部搜索框支持英文前缀匹配和中文模糊搜索，查词如翻字典般丝滑，可在下拉列表中直接删除单词。</li>
-                    <li><b>本地备份：</b>除自动云同步外，您也可以通过右上角的“导出/导入”生成代码，进行手动硬备份或分享词库。</li>
-                </ul>
-
-                <h4>🧠 复习模式 (闪卡记忆)</h4>
-                <ul>
-                    <li><b>闪卡队列：</b>每次复习生成一个队列。点击“认识”将单词移出本轮队列，点击“不认识”将单词<b>重排至队尾</b>，直到您彻底掌握。</li>
-                    <li><b>真人美音：</b>翻阅卡片或点击 🔊 图标时，会自动播放纯正的有道真人美式发音（断网时自动降级为系统语音）。</li>
-                    <li><b>联想搜索：</b>卡片背面内置了快捷搜索框，复习时如果遇到似曾相识的词，可以立刻搜索对比。</li>
-                </ul>
-
-                <h4>✨ 贴心细节</h4>
-                <ul>
-                    <li><b>学习看板：</b>顶部会实时统计您的“总词汇量”和“今日复习次数”，每天归零，见证自己每一天的坚持。</li>
-                    <li><b>护眼深色模式：</b>点击界面左上角的 🌙/☀️ 图标，一键切换深夜护眼模式，系统会自动记住您的偏好。</li>
-                </ul>
-            </div>
+    <!-- 自定义确认弹窗 -->
+    <div id="confirmModal" class="modal-overlay" onclick="window.closeConfirmModalOnBg(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 id="confirmModalTitle">确认操作</h3>
+            <p id="confirmModalText"></p>
             <div class="modal-actions">
-                <button class="btn-primary" style="width: 100%;" onclick="window.closeHelpModal()">我知道了</button>
+                <button class="btn-neutral" onclick="window.closeConfirmModal()">取消</button>
+                <button class="btn-primary" style="background-color: var(--danger-color);" onclick="window.submitConfirm()">确认</button>
             </div>
         </div>
     </div>
 
-    <!-- ================= 身份验证/登录大门 ================= -->
+    <!-- 登录界面 -->
     <div id="loginView">
-        <button class="login-theme-btn" onclick="window.toggleTheme()" title="切换深色模式" id="loginThemeBtn">🌙</button>
-        <button class="login-help-btn" onclick="window.openHelpModal()" title="查看功能说明">❔ 帮助</button>
-        <div class="login-title">🔒 私有词库</div>
-        <div class="login-desc">请输入邀请码以解锁应用</div>
-        <input type="password" id="accessCodeInput" class="login-input" placeholder="输入访问码..." onkeypress="window.handleLoginEnter(event)" autocomplete="off">
-        <button class="login-btn" onclick="window.verifyAccess()">解 锁</button>
+        <button class="login-theme-btn" onclick="window.toggleTheme()" id="loginThemeBtn">🌙</button>
+        <div class="login-title">💡 协作词库</div>
+        <div class="login-desc">输入房间邀请码与昵称开始同步</div>
+        <input type="password" id="accessCodeInput" class="login-input" placeholder="邀请码 (如: 8888)" autocomplete="off">
+        <input type="text" id="nicknameInput" class="login-input" placeholder="您的昵称" autocomplete="off" onkeypress="if(event.key==='Enter') window.verifyAccess()">
+        <button class="login-btn" onclick="window.verifyAccess()">进入学习空间</button>
     </div>
 
-    <!-- ================= 验证通过后显示的主应用 ================= -->
+    <!-- 主应用 -->
     <div id="appContent">
         <header>
-            <button class="help-btn" onclick="window.openHelpModal()" title="查看功能说明">❔ 帮助</button>
-            <button class="theme-btn" onclick="window.toggleTheme()" title="切换深色模式" id="appThemeBtn">🌙</button>
+            <button class="theme-btn" onclick="window.toggleTheme()" id="appThemeBtn">🌙</button>
             <h1>我的单词本</h1>
-            <button class="logout-btn" onclick="window.logout()" title="锁定退出">退出登录</button>
-
-            <!-- 📊 学习统计与成就感看板 -->
+            <button class="logout-btn" onclick="window.logout()">退出登录</button>
+            
             <div class="stats-board">
-                <div class="stat-item" title="数据同步状态" id="cloudStatus" class="offline">💾 本地模式</div>
-                <div class="stat-item" title="词库中积累的单词总数">📝 总词汇: <b id="statTotal">0</b></div>
-                <div class="stat-item" title="今日翻阅复习的卡片次数">✅ 今日复习: <b id="statToday">0</b></div>
+                <div class="stat-item" id="cloudStatus">💾 本地</div>
+                <div class="stat-item">词库: <b id="statTotal">0</b></div>
+                <div class="stat-item">今日: <b id="statToday">0</b></div>
             </div>
+
+            <div class="presence-list" id="presenceList"></div>
         </header>
 
         <div class="mode-toggle">
@@ -430,429 +286,422 @@
             <button class="mode-btn" id="btnModeEdit" onclick="window.switchMode('edit')">编辑模式</button>
         </div>
 
+        <!-- ================= 复习模式区块 ================= -->
         <div id="viewReview" class="view-section active">
-            <div class="list-select-container">
-                <label for="reviewListSelect">复习列表：</label>
-                <select id="reviewListSelect" class="list-select" onchange="window.handleListChange(event)"></select>
-            </div>
-            <section class="review-section" id="reviewSection"></section>
+            <!-- 仅保留选择列表和卡片区域，无任何管理功能 -->
+            <select id="reviewListSelect" class="list-select" style="width:100%; padding:0.9rem; border-radius:16px; border:1px solid var(--border-color); margin-bottom:2rem; outline:none; font-weight:600;" onchange="window.handleListChange(event)"></select>
+            <div id="reviewContainer"></div>
         </div>
 
+        <!-- ================= 编辑模式区块 ================= -->
         <div id="viewEdit" class="view-section">
-            <div class="edit-toolbar">
-                <h2>单词列表</h2>
-                <div class="toolbar-actions">
-                    <button class="btn-neutral" onclick="window.openImportModal()">📥 本地导入</button>
-                    <button class="btn-neutral" onclick="window.openExportModal()">📤 手动备份</button>
-                    <button id="newListBtn" class="btn-primary" onclick="window.createNewList()">+ 新建分组</button>
+            <!-- 仅保留列表管理、搜索和修改，无任何卡片 -->
+            <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem; align-items:center;">
+                <h2 style="font-size:1.4rem; font-weight:800;">词库管理</h2>
+                <div style="display:flex; gap:0.6rem;">
+                    <button class="btn-primary" onclick="window.createNewList()" style="font-size:0.8rem;">+ 新分组</button>
                 </div>
             </div>
             
             <div class="search-container">
-                <input type="text" id="searchInput" placeholder="🔍 搜索单词、释义或说明..." autocomplete="off" oninput="window.handleSearchInput(event)">
+                <input type="text" id="searchInput" placeholder="🔍 搜索单词(前缀)或释义..." oninput="window.handleSearchInput(event)">
             </div>
             
-            <div id="searchResults" class="search-results-list"></div>
-            <div class="accordion-group" id="accordionGroup"></div>
+            <div id="searchResults" style="margin-bottom:1.5rem; display:none;"></div>
+            <div id="accordionGroup"></div>
         </div>
     </div>
 
-    <!-- 使用 module 引入 Firebase 和核心逻辑 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, serverTimestamp, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // ================= ⚠️ 云端实时同步 (Firebase) 已配置 ⚠️ =================
-        let db, auth, user, currentAccessCode;
+        // --- Firebase 配置 ---
+        const configFromEnv = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const firebaseConfig = configFromEnv || {
+            apiKey: "AIzaSyDuo-Ngn5sWQfekP2KU0HCbZRadwDeBvBg",
+            authDomain: "myprogram-cb5f3.firebaseapp.com",
+            projectId: "myprogram-cb5f3",
+            storageBucket: "myprogram-cb5f3.firebasestorage.app",
+            messagingSenderId: "548403580313",
+            appId: "1:548403580313:web:d2b805e010b4fb49cf1708"
+        };
+        const finalAppId = typeof __app_id !== 'undefined' ? __app_id : 'wordbook-app';
+
+        // --- 全局状态 ---
+        let db, auth, user, currentAccessCode, currentNickname;
         let isFirebaseActive = false;
         let unsubSnapshot = null;
-        let cloudSyncTimeout = null;
+        let appData = { lists: [{id:'default', name:'默认分组'}], words: [], activeListId: 'default', stats: { date: '', reviewedCount: 0 } };
+        let reviewQueue = [];
+        let expandedListId = null;
 
-        // =========================================================================
-        // 🚀 [环境自适应逻辑]
-        // 自动识别预览环境 (使用系统令牌) 或 正式部署环境 (使用您的专属配置)
-        // =========================================================================
-        let finalFirebaseConfig = null;
-        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-            finalFirebaseConfig = JSON.parse(__firebase_config);
-        } else {
-            // 您的个人配置，仅在 GitHub 等正式环境生效
-            finalFirebaseConfig = {
-                apiKey: "AIzaSyDuo-Ngn5sWQfekP2KU0HCbZRadwDeBvBg",
-                authDomain: "myprogram-cb5f3.firebaseapp.com",
-                projectId: "myprogram-cb5f3",
-                storageBucket: "myprogram-cb5f3.firebasestorage.app",
-                messagingSenderId: "548403580313",
-                appId: "1:548403580313:web:d2b805e010b4fb49cf1708"
-            };
+        // --- 数据净化 ---
+        function sanitizeData(data) {
+            if (!data) data = {};
+            if (!data.lists || !Array.isArray(data.lists) || data.lists.length === 0) data.lists = [{id:'default', name:'默认分组'}];
+            if (!data.words || !Array.isArray(data.words)) data.words = [];
+            if (!data.stats) data.stats = { date: '', reviewedCount: 0 };
+            if (!data.activeListId) data.activeListId = data.lists[0].id;
+            return data;
         }
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'github-wordbook-app';
+        // --- 全局弹窗逻辑 (修复原生 prompt 拦截问题) ---
+        let currentPromptCallback = null;
+        window.openPrompt = function(title, desc, placeholder, onConfirm) {
+            document.getElementById('promptModalTitle').innerText = title;
+            document.getElementById('promptModalDesc').innerText = desc;
+            const input = document.getElementById('promptModalInput');
+            input.placeholder = placeholder;
+            input.value = '';
+            document.getElementById('promptModal').classList.add('active');
+            input.focus();
+            currentPromptCallback = onConfirm;
+        };
+        window.submitPrompt = function() {
+            const val = document.getElementById('promptModalInput').value;
+            window.closePromptModal();
+            if (currentPromptCallback) { currentPromptCallback(val); currentPromptCallback = null; }
+        };
+        window.closePromptModal = () => document.getElementById('promptModal').classList.remove('active');
+        window.closePromptModalOnBg = (e) => { if(e.target.id === 'promptModal') window.closePromptModal(); };
 
-        if (finalFirebaseConfig) {
+        let currentConfirmCallback = null;
+        window.openConfirm = function(title, text, onConfirm) {
+            document.getElementById('confirmModalTitle').innerText = title;
+            document.getElementById('confirmModalText').innerText = text;
+            document.getElementById('confirmModal').classList.add('active');
+            currentConfirmCallback = onConfirm;
+        };
+        window.submitConfirm = function() {
+            window.closeConfirmModal();
+            if (currentConfirmCallback) { currentConfirmCallback(); currentConfirmCallback = null; }
+        };
+        window.closeConfirmModal = () => document.getElementById('confirmModal').classList.remove('active');
+        window.closeConfirmModalOnBg = (e) => { if(e.target.id === 'confirmModal') window.closeConfirmModal(); };
+
+        // --- 初始化入口 ---
+        window.onload = () => {
+            if (localStorage.getItem('wb_granted') === 'true') unlockApp();
+            else document.getElementById('loginView').classList.add('active');
+        };
+
+        async function initFirebase(code, nick) {
             try {
-                const app = initializeApp(finalFirebaseConfig);
+                const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
-                isFirebaseActive = true;
-
                 const initAuth = async () => {
-                    // 只有在提供有效 API Key 且与 Token 匹配时，身份验证才会成功
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+                    else await signInAnonymously(auth);
                 };
-                initAuth();
-
                 onAuthStateChanged(auth, (u) => {
-                    user = u;
-                    const granted = localStorage.getItem('wordbook_access_granted') === 'true';
-                    const code = localStorage.getItem('wordbook_access_code');
-                    if (user && granted && code) {
-                        currentAccessCode = code;
-                        setupCloudSync(code);
-                    }
+                    if (u) { user = u; isFirebaseActive = true; setupCloudSync(code); startPresence(code, nick); }
                 });
-            } catch (e) {
-                console.warn("Firebase 初始化失败:", e);
-            }
+                await initAuth();
+            } catch (e) { console.error(e); }
         }
 
-        function setupCloudSync(code) {
-            if (!isFirebaseActive || !user) return;
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'wordbooks', code);
-            
-            const statusEl = document.getElementById('cloudStatus');
-            if(statusEl) {
-                statusEl.innerHTML = '🔄 连接中...';
-                statusEl.classList.remove('offline');
-            }
-            
-            if (unsubSnapshot) unsubSnapshot();
-            
-            unsubSnapshot = onSnapshot(docRef, (snapshot) => {
-                if(statusEl) statusEl.innerHTML = '☁️ 云端同步中';
-                
-                if (snapshot.exists()) {
-                    const cloudData = snapshot.data();
-                    appData = cloudData;
-                    window.updateStatsUI();
-                    if (currentMode === 'edit') {
-                        window.renderEditAccordions();
-                    } else {
-                        window.renderReviewSelect();
-                        if (!currentReviewListId || currentReviewListId !== appData.activeListId) {
-                            window.initReviewSession();
-                        } else {
-                            window.renderReviewCard();
-                        }
-                    }
-                } else {
-                    pushToCloud();
-                }
-            }, (error) => {
-                console.error("云端连接断开或无权限:", error);
-                if(statusEl) {
-                    statusEl.innerHTML = '⚠️ 离线模式';
-                    statusEl.classList.add('offline');
-                }
-            });
-        }
-
-        function pushToCloud() {
-            if (!isFirebaseActive || !user || !currentAccessCode) return;
-            clearTimeout(cloudSyncTimeout);
-            cloudSyncTimeout = setTimeout(async () => {
-                try {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'wordbooks', currentAccessCode);
-                    await setDoc(docRef, appData);
-                } catch(e) {
-                    console.error("推送失败:", e);
-                }
-            }, 800); 
-        }
-
-        // ================= 数据状态与全局绑定 =================
-        let appData = { lists: [], words: [], activeListId: 'default', stats: { date: new Date().toDateString(), reviewedCount: 0 } };
-        let expandedListId = null;
-        let currentMode = 'review';
-        let reviewQueue = [];
-        let currentReviewListId = null;
-        window.appData = appData;
-
-        // ================= 深色模式逻辑 =================
-        window.toggleTheme = function() {
-            const isDark = document.documentElement.classList.toggle('dark');
-            localStorage.setItem('wordbook_theme', isDark ? 'dark' : 'light');
-            updateThemeIcons(isDark);
+        window.verifyAccess = () => {
+            const code = document.getElementById('accessCodeInput').value.trim();
+            const nick = document.getElementById('nicknameInput').value.trim();
+            if (!code || !nick) return window.showToast("请输入邀请码和昵称");
+            localStorage.setItem('wb_granted', 'true');
+            localStorage.setItem('wb_code', code);
+            localStorage.setItem('wb_nick', nick);
+            unlockApp();
         };
-        function updateThemeIcons(isDark) {
-            const icon = isDark ? '☀️' : '🌙';
-            const loginBtn = document.getElementById('loginThemeBtn');
-            const appBtn = document.getElementById('appThemeBtn');
-            if(loginBtn) loginBtn.textContent = icon;
-            if(appBtn) appBtn.textContent = icon;
-        }
-        const savedTheme = localStorage.getItem('wordbook_theme');
-        if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-            updateThemeIcons(true);
-        }
 
-        // ================= 发音引擎 =================
-        let availableVoices = [];
-        let currentAudio = null;
-        function loadVoices() { availableVoices = window.speechSynthesis.getVoices(); }
-        if ('speechSynthesis' in window) {
-            loadVoices();
-            if (window.speechSynthesis.onvoiceschanged !== undefined) window.speechSynthesis.onvoiceschanged = loadVoices;
-        }
-        window.speakWord = function(text, event) {
-            if (event) event.stopPropagation();
-            const ttsBtn = document.querySelector('.tts-btn');
-            if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-            if (ttsBtn) ttsBtn.classList.add('playing');
-            const audioUrl = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=2`;
-            currentAudio = new Audio(audioUrl);
-            currentAudio.onended = () => { if (ttsBtn) ttsBtn.classList.remove('playing'); currentAudio = null; };
-            currentAudio.play().catch(() => { fallbackTTS(text, ttsBtn); });
-        };
-        function fallbackTTS(text, ttsBtn) {
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'en-US'; utterance.rate = 0.75; 
-                if (availableVoices.length > 0) {
-                    let bestVoice = availableVoices.find(v => v.name.includes('Google US English')) || availableVoices.find(v => v.lang === 'en-US');
-                    if (bestVoice) utterance.voice = bestVoice;
-                }
-                utterance.onend = () => { if (ttsBtn) ttsBtn.classList.remove('playing'); };
-                window.speechSynthesis.speak(utterance);
-            }
-        }
-
-        // ================= 身份验证 =================
-        const VALID_ACCESS_CODES = ['zhanlin', '123456', 'VIP2026'];
-        const loginView = document.getElementById('loginView');
-        const appContent = document.getElementById('appContent');
-        const accessCodeInput = document.getElementById('accessCodeInput');
-
-        setTimeout(() => {
-            if (localStorage.getItem('wordbook_access_granted') === 'true') {
-                const code = localStorage.getItem('wordbook_access_code');
-                if(code) currentAccessCode = code;
-                unlockApp();
-            } else { loginView.classList.add('active'); }
-        }, 100);
-
-        window.verifyAccess = function() {
-            const code = accessCodeInput.value.trim();
-            if (VALID_ACCESS_CODES.includes(code)) {
-                localStorage.setItem('wordbook_access_granted', 'true');
-                localStorage.setItem('wordbook_access_code', code);
-                currentAccessCode = code;
-                unlockApp();
-                if (isFirebaseActive && user) setupCloudSync(code);
-            } else { window.showToast('访问码不正确 🥲'); }
-        };
-        window.handleLoginEnter = function(e) { if (e.key === 'Enter') window.verifyAccess(); };
-        window.logout = function() {
-            if (confirm('确定要退出并锁定私有词库吗？')) {
-                localStorage.removeItem('wordbook_access_granted');
-                localStorage.removeItem('wordbook_access_code');
-                location.reload();
-            }
-        };
-        function unlockApp() { loginView.classList.remove('active'); appContent.classList.add('active'); initAppData(); }
-
-        // ================= 帮助说明 =================
-        window.openHelpModal = function() { document.getElementById('helpModal').classList.add('active'); };
-        window.closeHelpModal = function() { document.getElementById('helpModal').classList.remove('active'); };
-        window.closeHelpModalOnBackground = function(e) { if(e.target === document.getElementById('helpModal')) window.closeHelpModal(); };
-
-        // ================= 应用逻辑 =================
-        const btnModeReview = document.getElementById('btnModeReview');
-        const btnModeEdit = document.getElementById('btnModeEdit');
-        const viewReview = document.getElementById('viewReview');
-        const viewEdit = document.getElementById('viewEdit');
-        const reviewListSelect = document.getElementById('reviewListSelect');
-        const reviewSection = document.getElementById('reviewSection');
-        const searchInput = document.getElementById('searchInput');
-        const searchResults = document.getElementById('searchResults');
-        const accordionGroup = document.getElementById('accordionGroup');
-        const toast = document.getElementById('toast');
-
-        function initAppData() {
-            const savedData = localStorage.getItem('vocabularyAppData');
-            if (savedData) {
-                appData = JSON.parse(savedData);
-                if (!appData.stats) appData.stats = { date: new Date().toDateString(), reviewedCount: 0 };
-            } else {
-                appData = { lists: [{ id: 'default', name: '默认列表' }], words: [], activeListId: 'default', stats: { date: new Date().toDateString(), reviewedCount: 0 } };
-            }
+        function unlockApp() {
+            currentAccessCode = localStorage.getItem('wb_code');
+            currentNickname = localStorage.getItem('wb_nick');
+            document.getElementById('loginView').classList.remove('active');
+            document.getElementById('appContent').classList.add('active');
+            const localData = localStorage.getItem('wb_data');
+            if (localData) appData = sanitizeData(JSON.parse(localData));
+            initFirebase(currentAccessCode, currentNickname);
             window.updateStatsUI();
             window.renderReviewSelect();
             window.initReviewSession();
         }
 
-        window.updateStatsUI = function() {
-            document.getElementById('statTotal').textContent = appData.words.length;
-            const todayStr = new Date().toDateString();
-            document.getElementById('statToday').textContent = (appData.stats && appData.stats.date === todayStr) ? appData.stats.reviewedCount : 0;
-        };
+        // --- 云端同步引擎 ---
+        function setupCloudSync(code) {
+            const docRef = doc(db, 'artifacts', finalAppId, 'public', 'data', 'rooms', code);
+            if (unsubSnapshot) unsubSnapshot();
+            unsubSnapshot = onSnapshot(docRef, (snap) => {
+                document.getElementById('cloudStatus').innerHTML = "☁️ 云端同步";
+                if (snap.exists()) {
+                    appData = sanitizeData(snap.data());
+                    window.updateStatsUI();
+                    if (document.getElementById('viewEdit').classList.contains('active')) {
+                        window.renderEditAccordions();
+                    } else { 
+                        window.renderReviewSelect(); 
+                        window.renderReviewCard(); 
+                    }
+                } else { pushToCloud(); }
+            }, (error) => { console.warn("Cloud Sync Error:", error); });
+        }
 
-        window.switchMode = function(mode) {
-            currentMode = mode;
-            if (mode === 'review') {
-                btnModeReview.classList.add('active'); btnModeEdit.classList.remove('active');
-                viewReview.classList.add('active'); viewEdit.classList.remove('active');
-                window.renderReviewSelect();
-                if (currentReviewListId !== appData.activeListId) window.initReviewSession();
-                else window.renderReviewCard();
-            } else {
-                btnModeEdit.classList.add('active'); btnModeReview.classList.remove('active');
-                viewEdit.classList.add('active'); viewReview.classList.remove('active');
-                window.renderEditAccordions();
-            }
-        };
+        async function pushToCloud() {
+            if (!isFirebaseActive || !user) return;
+            try { await setDoc(doc(db, 'artifacts', finalAppId, 'public', 'data', 'rooms', currentAccessCode), appData); } 
+            catch(e) { console.error("Cloud push failed:", e); }
+        }
 
-        window.handleSearchInput = function(e) {
-            const query = e.target.value.trim();
-            if (query === '') { searchResults.classList.remove('active'); accordionGroup.style.display = 'flex'; window.renderEditAccordions(); }
-            else { searchResults.classList.add('active'); accordionGroup.style.display = 'none'; renderSearchResults(query, searchResults); }
-        };
-
-        function renderSearchResults(query, container) {
-            container.innerHTML = '';
-            const q = query.toLowerCase();
-            const matched = appData.words.filter(w => w.word.toLowerCase().includes(q) || w.meaning.toLowerCase().includes(q));
-            if (matched.length === 0) { container.innerHTML = '<div style="padding:2rem;text-align:center;">没找到 🥲</div>'; return; }
-            matched.forEach(w => {
-                const div = document.createElement('div');
-                div.className = 'search-result-item';
-                div.innerHTML = `<div class="search-result-word">${w.word}</div><div class="search-result-meaning">${w.meaning}</div><button class="delete-word-btn" onclick="window.deleteWord(${w.id})">×</button>`;
-                container.appendChild(div);
+        function startPresence(code, nick) {
+            const update = async () => {
+                if(!user) return;
+                await setDoc(doc(db, 'artifacts', finalAppId, 'public', 'data', 'rooms', code, 'presence', user.uid), { nick, lastActive: serverTimestamp() }, { merge: true });
+            };
+            update();
+            setInterval(update, 30000);
+            onSnapshot(collection(db, 'artifacts', finalAppId, 'public', 'data', 'rooms', code, 'presence'), (snap) => {
+                const list = document.getElementById('presenceList');
+                const now = Date.now();
+                const html = snap.docs.map(d => {
+                    const data = d.data();
+                    const isOnline = (now - (data.lastActive?.toMillis() || 0)) < 120000;
+                    return `<div class="user-presence"><span class="status-dot ${isOnline?'online':'offline'}"></span>${data.nick}</div>`;
+                }).join('');
+                list.innerHTML = `<div class="presence-title">👥 正在房间的人：</div>` + html;
             });
         }
 
-        window.handleListChange = function(e) { appData.activeListId = e.target.value; window.saveData(); window.initReviewSession(); };
+        // --- 核心业务逻辑 ---
+        window.switchMode = (m) => {
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            document.getElementById('btnMode' + (m==='review'?'Review':'Edit')).classList.add('active');
+            document.getElementById('view' + (m==='review'?'Review':'Edit')).classList.add('active');
+            if(m==='edit') {
+                window.renderEditAccordions(); 
+            } else { 
+                window.renderReviewSelect(); 
+                window.initReviewSession(); 
+            }
+        };
 
-        window.renderReviewSelect = function() {
-            reviewListSelect.innerHTML = '';
-            appData.lists.forEach(l => {
-                const opt = document.createElement('option');
-                opt.value = l.id; opt.textContent = l.name; opt.selected = (l.id === appData.activeListId);
-                reviewListSelect.appendChild(opt);
+        window.speak = (t, e) => {
+            if(e) e.stopPropagation();
+            const btn = e?.currentTarget || document.querySelector('.tts-btn');
+            if (btn) btn.classList.add('playing');
+            const audio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(t)}&type=2`);
+            audio.onended = () => btn.classList.remove('playing');
+            audio.onerror = () => btn.classList.remove('playing');
+            audio.play().catch(() => btn.classList.remove('playing'));
+        };
+
+        function performSearch(query) {
+            const q = query.trim().toLowerCase();
+            if (!q) return [];
+            const isEnglish = /^[a-zA-Z\s]+$/.test(q);
+            return appData.words.filter(w => {
+                if (isEnglish) return w.word.toLowerCase().startsWith(q); // 英文前缀匹配
+                return w.meaning.toLowerCase().includes(q); // 中文包含
             });
+        }
+
+        window.handleSearchInput = (e) => {
+            const q = e.target.value;
+            const resArea = document.getElementById('searchResults');
+            const accArea = document.getElementById('accordionGroup');
+            if (!q.trim()) { resArea.style.display = 'none'; accArea.style.display = 'block'; return; }
+            resArea.style.display = 'block'; accArea.style.display = 'none';
+            const matched = performSearch(q);
+            resArea.innerHTML = matched.map(w => `
+                <div class="edit-word-item" style="background:var(--card-bg); border-radius:16px; margin-bottom:0.8rem; border:1px solid var(--border-color); padding:1.2rem;">
+                    <div class="edit-word-info"><b>${w.word}</b><span>${w.meaning}</span>${w.note?`<small>${w.note}</small>`:''}</div>
+                    <button class="logout-btn" style="position:static; color:var(--danger-color); font-size:1.6rem; padding:0.5rem;" onclick="window.delWord(${w.id})">×</button>
+                </div>
+            `).join('') || '<div style="text-align:center; padding:3rem; color:gray;">无结果</div>';
         };
 
-        window.initReviewSession = function() {
-            currentReviewListId = appData.activeListId;
-            reviewQueue = [...appData.words.filter(w => w.listId === appData.activeListId)];
-            window.renderReviewCard();
-        };
-
-        window.renderReviewCard = function() {
-            if (appData.words.filter(w => w.listId === appData.activeListId).length === 0) {
-                reviewSection.innerHTML = '<div class="empty-state"><h2>列表为空</h2><p>去编辑模式加词吧！</p></div>'; return;
+        // --- 渲染复习模式卡片 (格式已按需求重排) ---
+        window.renderReviewCard = () => {
+            const area = document.getElementById('reviewContainer');
+            const currentListWords = appData.words.filter(w => w.listId === appData.activeListId);
+            
+            if (!currentListWords.length) { 
+                area.innerHTML = "<div style='text-align:center; padding:4rem; color:var(--text-muted); background:white; border-radius:28px;'><h2>列表暂无单词</h2><p style='margin-top:1rem;'>请去编辑模式添加单词吧！</p></div>"; 
+                return; 
             }
-            if (reviewQueue.length === 0) {
-                reviewSection.innerHTML = '<div class="empty-state"><h2>🎉 复习完啦！</h2><button class="btn-primary" onclick="window.initReviewSession()">再来一遍</button></div>'; return;
+            if (!reviewQueue.length) { 
+                area.innerHTML = "<div style='text-align:center; padding:4rem; color:var(--text-muted); background:white; border-radius:28px;'><h2>🎉 复习完毕</h2><p style='margin-top:1rem;'>当前分组已全部掌握。</p><button class='btn-primary' style='margin-top:2rem;' onclick='window.initReviewSession()'>重新复习</button></div>"; 
+                return; 
             }
+            
             const w = reviewQueue[0];
-            reviewSection.innerHTML = `
-                <div class="flashcard" id="flashcard">
-                    <div class="status-badge">剩余: ${reviewQueue.length}</div>
-                    <div class="word-en-large">${w.word} <button class="tts-btn" onclick="window.speakWord('${w.word.replace(/'/g, "\\'")}', event)">🔊</button></div>
-                    <div class="click-hint">点击查看释义</div>
-                    <div class="flashcard-back">
-                        <div class="word-zh-large">${w.meaning}</div>
-                        ${w.note ? `<div class="word-note-large">${w.note}</div>` : ''}
-                        <div class="action-buttons">
-                            <button class="btn-forgot" onclick="event.stopPropagation(); window.handleReview(${w.id}, false)">不认识</button>
-                            <button class="btn-know" onclick="event.stopPropagation(); window.handleReview(${w.id}, true)">认识</button>
+            area.innerHTML = `
+                <div class="flip-container">
+                    <div class="card-flipper" id="flipper" onclick="this.classList.toggle('flipped')">
+                        <!-- 卡片正面 -->
+                        <div class="card-front">
+                            <div style="position:absolute; top:25px; right:25px; font-size:0.85rem; color:var(--text-muted); font-weight:700;">待复习: ${reviewQueue.length}</div>
+                            <div class="word-en-large">${w.word}</div>
+                            <button class="tts-btn" onclick="window.speak('${w.word}', event)">🔊</button>
+                            <div style="margin-top:3.5rem; color:var(--text-muted); font-size:0.95rem; animation: pulse-online 2s infinite;">点击查看背面释义</div>
+                        </div>
+
+                        <!-- 卡片背面 (按最新要求排版) -->
+                        <div class="card-back" onclick="event.stopPropagation()">
+                            <div style="width:100%; text-align:center; flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                                
+                                <!-- 第一行：原词 + 喇叭 -->
+                                <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:1.5rem;">
+                                    <span class="word-en-large" style="margin-bottom:0;">${w.word}</span>
+                                    <button class="tts-btn" onclick="window.speak('${w.word}', event)">🔊</button>
+                                </div>
+                                
+                                <!-- 换行后：词义解释 -->
+                                <div class="word-zh-large">${w.meaning}</div>
+                                
+                                <!-- 换行后：注释内容 -->
+                                ${w.note ? `<div class="word-note-display">${w.note}</div>` : ''}
+
+                            </div>
+                            
+                            <div class="action-buttons">
+                                <button class="btn-forgot" onclick="window.handleReview(false)">不认识</button>
+                                <button class="btn-know" onclick="window.handleReview(true)">掌握了</button>
+                            </div>
                         </div>
                     </div>
                 </div>`;
-            document.getElementById('flashcard').addEventListener('click', function() { this.classList.add('revealed'); });
-            window.speakWord(w.word);
+            window.speak(w.word);
         };
 
-        window.handleReview = function(id, known) {
-            const w = reviewQueue.shift();
-            if (!known) reviewQueue.push(w);
+        window.handleReview = (k) => {
+            const w = reviewQueue.shift(); if(!k) reviewQueue.push(w);
             const today = new Date().toDateString();
-            if (!appData.stats || appData.stats.date !== today) appData.stats = { date: today, reviewedCount: 0 };
+            if(appData.stats.date !== today) { appData.stats.date = today; appData.stats.reviewedCount = 0; }
             appData.stats.reviewedCount++;
-            window.saveData(); window.updateStatsUI(); window.renderReviewCard();
+            saveLocal(); pushToCloud(); window.updateStatsUI(); window.renderReviewCard();
         };
 
-        window.createNewList = function() {
-            const name = prompt('分组名称：');
-            if (name) {
-                const newList = { id: 'list_' + Date.now(), name: name.trim() };
-                appData.lists.push(newList); expandedListId = newList.id;
-                window.saveData(); window.renderEditAccordions();
-            }
-        };
-
-        window.renderEditAccordions = function() {
-            accordionGroup.innerHTML = '';
-            appData.lists.forEach(l => {
+        window.renderEditAccordions = () => {
+            const group = document.getElementById('accordionGroup');
+            group.innerHTML = appData.lists.map(l => {
                 const words = appData.words.filter(w => w.listId === l.id);
-                const item = document.createElement('div');
-                item.className = `accordion-item ${expandedListId === l.id ? 'expanded' : ''}`;
-                item.innerHTML = `
+                return `
+                <div class="accordion-item ${expandedListId===l.id?'expanded':''}">
                     <div class="accordion-header" onclick="window.toggleAccordion('${l.id}')">
-                        <div class="accordion-title">${l.name} <span class="word-count-badge">${words.length}</span></div>
-                        <button class="btn-danger-outline" onclick="event.stopPropagation(); window.deleteList('${l.id}')">删除</button>
+                        <b>${l.name} <span style="font-weight:normal; color:var(--text-muted); margin-left:8px;">(${words.length})</span></b>
+                        <button class="logout-btn" style="position:static; color:var(--danger-color); font-weight:700;" onclick="event.stopPropagation(); window.delList('${l.id}')">删除分组</button>
                     </div>
                     <div class="accordion-body">
                         <div class="add-word-form">
                             <div class="input-row">
-                                <input type="text" id="en_${l.id}" placeholder="英文">
-                                <input type="text" id="zh_${l.id}" placeholder="释义" onkeypress="if(event.key==='Enter')window.addWord('${l.id}')">
+                                <input id="en_${l.id}" placeholder="英文单词">
+                                <input id="zh_${l.id}" placeholder="中文释义" onkeypress="if(event.key==='Enter')window.addWord('${l.id}')">
                             </div>
-                            <button class="btn-primary" onclick="window.addWord('${l.id}')">添加</button>
+                            <textarea id="note_${l.id}" placeholder="补充笔记或例句 (可选)..."></textarea>
+                            <button class="btn-primary" onclick="window.addWord('${l.id}')" style="align-self:flex-end; padding:0.7rem 1.5rem;">添加单词</button>
                         </div>
-                        <ul class="edit-word-list">${words.map(w => `
-                            <li class="edit-word-item">
-                                <div><b>${w.word}</b> - ${w.meaning}</div>
-                                <button class="delete-word-btn" onclick="window.deleteWord(${w.id})">×</button>
-                            </li>`).join('')}</ul>
-                    </div>`;
-                accordionGroup.appendChild(item);
+                        ${words.map(w => `
+                            <div class="edit-word-item">
+                                <div class="edit-word-info"><b>${w.word}</b><span>${w.meaning}</span>${w.note?`<small>${w.note}</small>`:''}</div>
+                                <button class="logout-btn" style="position:static; color:var(--danger-color); font-size:1.6rem;" onclick="window.delWord(${w.id})">×</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`;
+            }).join('');
+        };
+
+        window.createNewList = () => {
+            window.openPrompt("新建分组", "给新词库起个名字", "例如: 雅思核心词汇", (n) => {
+                if(n && n.trim()) { 
+                    const newList = {id:'l'+Date.now(), name:n.trim()};
+                    appData.lists.push(newList); 
+                    expandedListId = newList.id; // 自动展开新分组
+                    saveLocal(); 
+                    pushToCloud(); 
+                    window.renderEditAccordions(); 
+                    window.renderReviewSelect(); 
+                    window.showToast("新分组已创建 ✨");
+                }
             });
         };
 
-        window.toggleAccordion = function(id) { expandedListId = (expandedListId === id ? null : id); window.renderEditAccordions(); };
-        window.deleteList = function(id) { if(confirm('删除分组？')){ appData.lists = appData.lists.filter(l=>l.id!==id); appData.words = appData.words.filter(w=>w.listId!==id); window.saveData(); window.renderEditAccordions(); } };
-        window.addWord = function(id) {
-            const en = document.getElementById(`en_${id}`).value.trim();
-            const zh = document.getElementById(`zh_${id}`).value.trim();
-            if(en && zh){ appData.words.push({id:Date.now(), listId:id, word:en, meaning:zh}); window.saveData(); window.renderEditAccordions(); }
-        };
-        window.deleteWord = function(id) { if(confirm('删除单词？')){ appData.words = appData.words.filter(w=>w.id!==id); window.saveData(); switchMode(currentMode); } };
+        window.addWord = (lid) => {
+            const e = document.getElementById('en_'+lid).value.trim();
+            const z = document.getElementById('zh_'+lid).value.trim();
+            const n = document.getElementById('note_'+lid).value.trim();
+            if(!e || !z) return window.showToast("请完整填写单词和释义");
+            appData.words.push({id:Date.now(), listId:lid, word:e, meaning:z, note:n});
+            
+            // 添加后清空输入框，方便连续录入
+            document.getElementById('en_'+lid).value = '';
+            document.getElementById('zh_'+lid).value = '';
+            document.getElementById('note_'+lid).value = '';
 
-        window.openExportModal = function() {
-            const code = btoa(encodeURIComponent(JSON.stringify(appData)));
-            document.getElementById('syncModalTextarea').value = code;
-            document.getElementById('syncModal').classList.add('active');
+            saveLocal(); 
+            pushToCloud(); 
+            window.renderEditAccordions();
+            
+            // 保持焦点在输入框
+            setTimeout(() => {
+                const newEnInput = document.getElementById(`en_${lid}`);
+                if (newEnInput) newEnInput.focus();
+            }, 0);
         };
-        window.openImportModal = function() { document.getElementById('syncModalTextarea').value = ''; document.getElementById('syncModal').classList.add('active'); };
-        window.closeSyncModal = function() { document.getElementById('syncModal').classList.remove('active'); };
 
-        window.saveData = function() {
-            localStorage.setItem('vocabularyAppData', JSON.stringify(appData));
-            pushToCloud();
+        window.delWord = (id) => { 
+            window.openConfirm("删除单词", "确定要将这个单词从词库中移除吗？", () => {
+                appData.words = appData.words.filter(w=>w.id!==id); 
+                saveLocal(); 
+                pushToCloud(); 
+                if(document.getElementById('searchInput').value) {
+                    window.handleSearchInput({target:document.getElementById('searchInput')}); 
+                } else {
+                    window.renderEditAccordions(); 
+                }
+            });
         };
-        window.showToast = function(msg) {
-            toast.textContent = msg; toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
+
+        window.delList = (id) => { 
+            if(appData.lists.length <= 1) return window.showToast("至少需要保留一个分组哦"); 
+            window.openConfirm("删除分组", "确定要删除该分组及其全部单词吗？此操作不可恢复。", () => {
+                appData.lists = appData.lists.filter(l=>l.id!==id); 
+                appData.words = appData.words.filter(w=>w.listId!==id); 
+                if(appData.activeListId === id) appData.activeListId = appData.lists[0].id;
+                saveLocal(); 
+                pushToCloud(); 
+                window.renderEditAccordions(); 
+                window.renderReviewSelect();
+            });
         };
+
+        window.toggleAccordion = (id) => { expandedListId = (expandedListId === id ? null : id); window.renderEditAccordions(); };
+        
+        window.updateStatsUI = () => {
+            document.getElementById('statTotal').innerText = appData.words.length;
+            document.getElementById('statToday').innerText = (appData.stats.date === new Date().toDateString()) ? appData.stats.reviewedCount : 0;
+        };
+        
+        window.renderReviewSelect = () => {
+            document.getElementById('reviewListSelect').innerHTML = appData.lists.map(l => `<option value="${l.id}" ${l.id===appData.activeListId?'selected':''}>${l.name}</option>`).join('');
+        };
+        
+        window.handleListChange = (e) => { appData.activeListId = e.target.value; saveLocal(); window.initReviewSession(); };
+        window.initReviewSession = () => { reviewQueue = [...appData.words.filter(w => w.listId === appData.activeListId)]; window.renderReviewCard(); };
+        
+        window.toggleTheme = () => { const d = document.documentElement.classList.toggle('dark'); localStorage.setItem('wb_theme', d?'dark':'light'); };
+        if(localStorage.getItem('wb_theme')==='dark') document.documentElement.classList.add('dark');
+        
+        window.logout = () => { 
+            window.openConfirm("退出登录", "退出后将需要重新输入房间邀请码，确定要退出吗？", () => {
+                localStorage.clear(); 
+                location.reload(); 
+            });
+        };
+
+        window.showToast = (m) => { const t = document.getElementById('toast'); t.innerText = m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3000); };
+        
+        function saveLocal() { localStorage.setItem('wb_data', JSON.stringify(appData)); }
     </script>
 </body>
 </html>
