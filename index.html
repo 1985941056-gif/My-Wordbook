@@ -149,11 +149,11 @@
             display: flex; justify-content: center; flex-wrap: wrap; gap: 0.6rem;
             margin-top: 1.5rem; padding: 0.8rem; background-color: var(--card-bg);
             border-radius: 16px; border: 1px solid var(--border-color);
+            min-height: 48px; /* 防止无人时高度坍塌 */
         }
         .user-presence { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; padding: 0.3rem 0.7rem; background: var(--bg-color); border-radius: 8px; }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; }
         .status-dot.online { background: var(--success-color); box-shadow: 0 0 8px var(--success-color); animation: pulse-online 2s infinite; }
-        .status-dot.offline { background: #9CA3AF; }
 
         @keyframes pulse-online { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
@@ -323,14 +323,15 @@
         const BMOB_BASE_URL = "https://api.bmobcloud.com/1/classes";
 
         // Bmob 极速请求封装器，带有容错处理机制
-        async function bmobFetch(path, method = 'GET', body = null) {
+        async function bmobFetch(path, method = 'GET', body = null, keepalive = false) {
             const options = {
                 method,
                 headers: {
                     "X-Bmob-Application-Id": BMOB_APP_ID,
                     "X-Bmob-REST-API-Key": BMOB_REST_KEY,
                     "Content-Type": "application/json"
-                }
+                },
+                keepalive: keepalive
             };
             if (body) options.body = JSON.stringify(body);
             const res = await fetch(`${BMOB_BASE_URL}${path}`, options);
@@ -352,6 +353,7 @@
         let currentAccessCode = "";
         let currentNickname = "";
         let myUserId = ""; // 替代 Firebase Auth 的设备唯一标识
+        let myPresenceObjId = null; // 记录当前设备的在线状态记录ID
         
         let appData = { lists: [{id:'default', name:'默认分组'}], words: [], activeListId: 'default', stats: { date: '', reviewedCount: 0 } };
         let reviewQueue = [];
@@ -360,6 +362,17 @@
         let isPushingData = false; // 防止拉取数据覆盖正在推送的数据
         let syncTimer = null;
         let presenceTimer = null;
+
+        // =====================================================================
+        // 🧹 安全退出/离开自动清理机制 (重要更新)
+        // =====================================================================
+        
+        // 监听浏览器/标签页关闭、刷新或锁屏，立即删除云端的在线状态记录
+        window.addEventListener('pagehide', () => {
+            if (myPresenceObjId) {
+                bmobFetch(`/Presence/${myPresenceObjId}`, 'DELETE', null, true).catch(() => {});
+            }
+        });
 
         // --- 数据净化 ---
         function sanitizeData(data) {
@@ -459,7 +472,7 @@
         }
 
         // =====================================================================
-        // ☁️ Bmob 同步引擎逻辑 (完美替代 Firebase onSnapshot)
+        // ☁️ Bmob 同步引擎逻辑
         // =====================================================================
         function startBmobSync() {
             const statusEl = document.getElementById('cloudStatus');
@@ -521,7 +534,6 @@
                     try {
                         await bmobFetch(`/RoomData/${objId}`, 'PUT', { dataStr });
                     } catch (putErr) {
-                        // 防止对象被意外删除导致的更新失败，失败则重建
                         if ((putErr.message || '').toLowerCase().includes('not found')) {
                             await bmobFetch(`/RoomData`, 'POST', { roomCode: currentAccessCode, dataStr });
                         } else throw putErr;
@@ -543,20 +555,23 @@
             async function heartbeat() {
                 try {
                     const now = Date.now();
-                    // 1. 更新自己的心跳
+                    // 1. 更新自己的心跳并记录 objId 以备退出时销毁
                     const queryMe = { roomCode: currentAccessCode, userId: myUserId };
                     const resMe = await bmobFetch(`/Presence?where=${encodeURIComponent(JSON.stringify(queryMe))}`);
                     
                     if (resMe.results && resMe.results.length > 0) {
+                        myPresenceObjId = resMe.results[0].objectId;
                         try {
-                            await bmobFetch(`/Presence/${resMe.results[0].objectId}`, 'PUT', { nick: currentNickname, lastActive: now });
+                            await bmobFetch(`/Presence/${myPresenceObjId}`, 'PUT', { nick: currentNickname, lastActive: now });
                         } catch (putErr) {
                             if ((putErr.message || '').toLowerCase().includes('not found')) {
-                                await bmobFetch(`/Presence`, 'POST', { roomCode: currentAccessCode, userId: myUserId, nick: currentNickname, lastActive: now });
+                                const postRes = await bmobFetch(`/Presence`, 'POST', { roomCode: currentAccessCode, userId: myUserId, nick: currentNickname, lastActive: now });
+                                myPresenceObjId = postRes.objectId;
                             } else throw putErr;
                         }
                     } else {
-                        await bmobFetch(`/Presence`, 'POST', { roomCode: currentAccessCode, userId: myUserId, nick: currentNickname, lastActive: now });
+                        const postRes = await bmobFetch(`/Presence`, 'POST', { roomCode: currentAccessCode, userId: myUserId, nick: currentNickname, lastActive: now });
+                        myPresenceObjId = postRes.objectId;
                     }
 
                     // 2. 拉取房间内所有人的状态
@@ -564,13 +579,15 @@
                     const resRoom = await bmobFetch(`/Presence?where=${encodeURIComponent(JSON.stringify(queryRoom))}`);
                     
                     const list = document.getElementById('presenceList');
-                    const html = resRoom.results.map(d => {
-                        // 30 秒内心跳视为在线
-                        const isOnline = (now - d.lastActive) < 35000; 
-                        return `<div class="user-presence"><span class="status-dot ${isOnline?'online':'offline'}"></span>${d.nick}</div>`;
+                    
+                    // 【优化】：过滤出真正在线的人，隐藏因为断网/强退导致的陈旧离线记录
+                    const activeUsers = resRoom.results.filter(d => (now - d.lastActive) < 35000);
+                    
+                    const html = activeUsers.map(d => {
+                        return `<div class="user-presence"><span class="status-dot online"></span>${d.nick}</div>`;
                     }).join('');
                     
-                    list.innerHTML = `<div class="presence-title">👥 正在房间的人：</div>` + html;
+                    list.innerHTML = `<div class="presence-title">👥 正在房间的人：</div>` + (html || '<div style="color:var(--text-muted); font-size:0.8rem; padding: 0.3rem;">房间暂时没有其他人</div>');
                 } catch(e) {
                     console.warn("状态刷新连接提示:", e.message);
                 }
@@ -694,7 +711,7 @@
             saveLocal(); pushToCloud(); window.updateStatsUI(); window.renderReviewCard();
         };
 
-        // --- 渲染编辑模式 (完全去除了卡片相关元素) ---
+        // --- 渲染编辑模式 ---
         window.renderEditAccordions = () => {
             const group = document.getElementById('accordionGroup');
             group.innerHTML = appData.lists.map(l => {
@@ -806,7 +823,11 @@
         if(localStorage.getItem('wb_theme')==='dark') document.documentElement.classList.add('dark');
         
         window.logout = () => { 
-            window.openConfirm("退出登录", "退出后将需要重新输入房间邀请码，确定要退出吗？", () => {
+            window.openConfirm("退出登录", "退出后将需要重新输入房间邀请码，确定要退出吗？", async () => {
+                // 退出时优先主动销毁在线状态记录
+                if (myPresenceObjId) {
+                    await bmobFetch(`/Presence/${myPresenceObjId}`, 'DELETE', null, true).catch(() => {});
+                }
                 localStorage.clear(); 
                 location.reload(); 
             });
