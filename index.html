@@ -446,7 +446,13 @@
         window.verifyAccess = () => {
             const code = document.getElementById('accessCodeInput').value.trim();
             const nick = document.getElementById('nicknameInput').value.trim();
+            
+            // 定义允许的邀请码白名单
+            const validCodes = ['wangruizhe', 'gongchenqi', 'luoyinli', 'zhanlin'];
+            
             if (!code || !nick) return window.showToast("请输入邀请码和昵称");
+            if (!validCodes.includes(code)) return window.showToast("邀请码不正确，请重新输入");
+            
             localStorage.setItem('wb_granted', 'true');
             localStorage.setItem('wb_code', code);
             localStorage.setItem('wb_nick', nick);
