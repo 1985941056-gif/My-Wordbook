@@ -575,7 +575,7 @@ self.addEventListener('push', event => {
         window.verifyAccess = () => {
             const code = document.getElementById('accessCodeInput').value.trim();
             const nick = document.getElementById('nicknameInput').value.trim();
-            const validCodes = ['wangruizhe', 'gongchenqi', 'luoyinli', 'zhanlin'];
+            const validCodes = ['wangruizhe', 'gongchenqi', 'luoyinli', '23271081'];
             
             if (!code || !nick) return window.showToast("请输入邀请码和昵称");
             if (!validCodes.includes(code)) return window.showToast("邀请码不正确");
