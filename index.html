@@ -2,7 +2,18 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- PWA: 视口优化，禁止缩放，适配刘海屏 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- PWA: 主题色与 iOS 特有 Meta 标签 -->
+    <meta name="theme-color" content="#F3F4F6" id="themeColorMeta">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="极简单词">
+    
+    <!-- 动态注入 Manifest 和 Icon -->
+    <link rel="apple-touch-icon" id="appleTouchIcon" href="">
+    <link rel="manifest" id="manifestLink" href="">
+    
     <title>极简单词本</title>
     <style>
         /* ================= 基础全局样式 ================= */
@@ -20,7 +31,12 @@
             --border-color: #E5E7EB;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        /* PWA: 移除点击高亮，防止页面下拉溢出 */
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        
+        html, body {
+            overscroll-behavior-y: none; /* 阻止 iOS/Android 下拉刷新，提升原生感 */
+        }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -29,9 +45,13 @@
             display: flex;
             justify-content: center;
             align-items: flex-start;
-            padding: 2rem 1rem;
+            /* 适配刘海屏安全区域 */
+            padding: calc(env(safe-area-inset-top, 0px) + 2rem) 1rem calc(env(safe-area-inset-bottom, 0px) + 2rem);
             min-height: 100vh;
         }
+
+        /* 强制表单元素字号 >= 16px 避免 iOS 自动放大 */
+        input, textarea, select { font-size: 16px !important; }
 
         /* ================= 深色模式 ================= */
         :root.dark {
@@ -50,10 +70,10 @@
         }
 
         .theme-btn, .login-theme-btn {
-            background: transparent; border: none; font-size: 1.2rem; cursor: pointer;
+            background: transparent; border: none; font-size: 1.4rem; cursor: pointer;
             padding: 0.5rem; transition: transform 0.2s;
         }
-        .theme-btn:hover, .login-theme-btn:hover { transform: scale(1.1); }
+        .theme-btn:active, .login-theme-btn:active { transform: scale(0.9); }
 
         /* ================= 喇叭动画 ================= */
         .tts-btn {
@@ -68,48 +88,24 @@
             100% { transform: scale(1); opacity: 0.7; }
         }
         
-        .tts-btn.playing {
-            animation: speaker-pulse 0.6s infinite ease-in-out;
-            color: var(--primary-hover);
-            opacity: 1;
-        }
+        .tts-btn.playing { animation: speaker-pulse 0.6s infinite ease-in-out; color: var(--primary-hover); opacity: 1; }
 
         /* ================= 3D 翻转卡片 ================= */
-        .flip-container {
-            perspective: 1000px;
-            width: 100%;
-            max-width: 500px;
-            margin: 0 auto;
-        }
-
+        .flip-container { perspective: 1000px; width: 100%; max-width: 500px; margin: 0 auto; }
         .card-flipper {
-            position: relative;
-            width: 100%;
-            min-height: 440px;
+            position: relative; width: 100%; min-height: 440px;
             transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-            transform-style: preserve-3d;
-            cursor: pointer;
+            transform-style: preserve-3d; cursor: pointer;
         }
-
-        .card-flipper.flipped {
-            transform: rotateY(180deg);
-        }
-
+        .card-flipper.flipped { transform: rotateY(180deg); }
         .card-front, .card-back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            border-radius: 28px;
-            background: var(--card-bg);
-            padding: 2.5rem;
-            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            border: 1px solid var(--border-color);
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+            border-radius: 28px; background: var(--card-bg); padding: 2.5rem 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); display: flex;
+            flex-direction: column; align-items: center; border: 1px solid var(--border-color);
+            -webkit-backface-visibility: hidden; /* Safari Fix */
+            transform: translateZ(0); /* 开启硬件加速 */
         }
-
         .card-front { justify-content: center; }
         .card-back { transform: rotateY(180deg); justify-content: space-between; }
 
@@ -118,13 +114,13 @@
             display: none; flex-direction: column; gap: 1.2rem;
             width: 100%; max-width: 360px; background-color: var(--card-bg);
             padding: 3.5rem 2rem; border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-            text-align: center; margin-top: 10vh; animation: fadeIn 0.5s ease;
+            text-align: center; margin-top: 5vh; animation: fadeIn 0.5s ease;
         }
         #loginView.active { display: flex; }
         .login-title { font-size: 1.8rem; font-weight: 800; }
         .login-input {
             width: 100%; padding: 0.9rem; border: 2px solid var(--border-color);
-            border-radius: 14px; font-size: 1rem; text-align: center; outline: none; transition: 0.2s;
+            border-radius: 14px; text-align: center; outline: none; transition: 0.2s;
         }
         .login-input:focus { border-color: var(--primary-color); box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
         .login-btn {
@@ -132,24 +128,21 @@
             background-color: var(--primary-color); color: white; font-size: 1.1rem;
             font-weight: 700; cursor: pointer; transition: 0.2s;
         }
-        .login-btn:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+        .login-btn:active { background-color: var(--primary-hover); transform: translateY(2px); }
 
         /* ================= 主应用布局 ================= */
-        #appContent { display: none; width: 100%; max-width: 600px; animation: fadeIn 0.4s ease; }
+        #appContent { display: none; width: 100%; max-width: 600px; animation: fadeIn 0.4s ease; padding-bottom: 2rem; }
         #appContent.active { display: block; }
         header { text-align: center; margin-bottom: 2rem; position: relative; }
-        .logout-btn { position: absolute; right: 0; top: 0; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; }
+        .logout-btn { position: absolute; right: 0; top: 0; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; padding: 0.5rem; }
         
         .stats-board { display: flex; justify-content: center; gap: 0.8rem; margin-top: 1rem; font-size: 0.85rem; }
         .stat-item { background: var(--card-bg); padding: 0.5rem 1.2rem; border-radius: 999px; border: 1px solid var(--border-color); box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; transition: 0.2s; }
-        .stat-item:hover { background: #F3F4F6; }
-        .stat-item b { color: var(--primary-color); }
-
+        
         .presence-list {
             display: flex; justify-content: center; flex-wrap: wrap; gap: 0.6rem;
             margin-top: 1.5rem; padding: 0.8rem; background-color: var(--card-bg);
-            border-radius: 16px; border: 1px solid var(--border-color);
-            min-height: 48px; /* 防止无人时高度坍塌 */
+            border-radius: 16px; border: 1px solid var(--border-color); min-height: 48px;
         }
         .user-presence { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; padding: 0.3rem 0.7rem; background: var(--bg-color); border-radius: 8px; }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; }
@@ -157,29 +150,55 @@
 
         @keyframes pulse-online { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-        /* --- 模式切换 --- */
-        .mode-toggle { display: flex; background: #E5E7EB; padding: 0.3rem; border-radius: 16px; margin: 2rem 0; }
+        /* --- 模式切换 (PWA 响应式：移动端吸底) --- */
+        .mode-toggle { display: flex; background: #E5E7EB; padding: 0.3rem; border-radius: 16px; margin: 2rem 0; transition: all 0.3s ease; }
         .mode-btn { flex: 1; padding: 0.85rem; border: none; background: transparent; border-radius: 13px; cursor: pointer; font-weight: 700; transition: 0.2s; color: var(--text-muted); }
         .mode-btn.active { background: var(--card-bg); color: var(--primary-color); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        
+        @media (max-width: 600px) {
+            /* 移动端吸底导航 */
+            .mode-toggle {
+                position: fixed;
+                bottom: env(safe-area-inset-bottom, 20px);
+                left: 50%;
+                transform: translateX(-50%);
+                width: calc(100% - 2rem);
+                margin: 0;
+                z-index: 1000;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+                backdrop-filter: blur(10px);
+                background: rgba(229, 231, 235, 0.85);
+            }
+            :root.dark .mode-toggle { background: rgba(55, 65, 81, 0.85); }
+            #appContent { padding-bottom: 80px; } /* 留出底部空间 */
+        }
+
+        /* --- PWA 安装按钮 --- */
+        .pwa-controls { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
+        .btn-install { 
+            display: none; background: linear-gradient(135deg, var(--primary-color), var(--success-color));
+            color: white; border: none; padding: 0.4rem 1.2rem; border-radius: 999px; 
+            font-size: 0.85rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            animation: pulse-online 2s infinite;
+        }
+        .btn-install.show { display: inline-flex; align-items: center; gap: 0.3rem; }
 
         /* --- 视图区块切换 --- */
         .view-section { display: none; animation: fadeIn 0.3s ease; }
         .view-section.active { display: block; }
 
-        /* --- 编辑模式 UI (完全无卡片) --- */
+        /* --- 编辑模式 UI --- */
         .search-container { margin-bottom: 1.5rem; position: relative; }
         .search-container input { 
             width: 100%; padding: 1.1rem 1.4rem; border: 1px solid var(--border-color);
-            border-radius: 20px; font-size: 1rem; outline: none; transition: 0.2s;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            border-radius: 20px; outline: none; transition: 0.2s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
         }
         .search-container input:focus { border-color: var(--primary-color); box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
 
-        .btn-primary { background-color: var(--primary-color); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
-        .btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+        .btn-primary { background-color: var(--primary-color); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
+        .btn-primary:active { transform: translateY(2px); }
         
-        .btn-neutral { background-color: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); padding: 0.6rem 1.2rem; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
-        .btn-neutral:hover { background-color: var(--border-color); }
+        .btn-neutral { background-color: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); padding: 0.6rem 1.2rem; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
 
         .accordion-item { background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border-color); margin-bottom: 1rem; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
         .accordion-header { padding: 1.25rem 1.5rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
@@ -188,31 +207,32 @@
 
         .add-word-form { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.5rem; background: var(--card-bg); padding: 1.2rem; border-radius: 16px; border: 1px solid var(--border-color); }
         .input-row { display: flex; gap: 0.8rem; }
-        .add-word-form input { flex: 1; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 10px; font-size: 0.95rem; outline: none; }
-        .add-word-form textarea { padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 10px; font-size: 0.9rem; outline: none; resize: vertical; min-height: 70px; font-family: inherit; }
+        .add-word-form input { flex: 1; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 10px; outline: none; }
+        .add-word-form textarea { padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 10px; outline: none; resize: vertical; min-height: 70px; font-family: inherit; }
         
         .edit-word-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 1rem; border-bottom: 1px solid var(--border-color); }
         .edit-word-info b { display: block; font-size: 1.1rem; color: var(--text-main); }
         .edit-word-info small { color: var(--text-muted); display: block; margin-top: 0.3rem; line-height: 1.4; white-space: pre-wrap; }
 
-        /* --- 复习模式卡片内容 (完全无词库管理) --- */
-        .word-en-large { font-size: 3.8rem; font-weight: 900; color: var(--text-main); }
-        .word-zh-large { font-size: 2rem; font-weight: 800; color: var(--primary-color); margin-bottom: 1rem; text-align: center; }
+        /* --- 复习模式卡片 --- */
+        .word-en-large { font-size: 3.2rem; font-weight: 900; color: var(--text-main); text-align: center; word-break: break-word; }
+        .word-zh-large { font-size: 1.8rem; font-weight: 800; color: var(--primary-color); margin-bottom: 1rem; text-align: center; }
         .word-note-display { font-size: 1rem; color: var(--text-muted); background: var(--bg-color); padding: 1.2rem; border-radius: 16px; line-height: 1.6; white-space: pre-wrap; width: 100%; text-align: center; margin-bottom: 1rem; }
         
-        .action-buttons { display: flex; gap: 1.2rem; width: 100%; margin-top: 1.5rem; }
-        .action-buttons button { flex: 1; padding: 1.2rem; border: none; border-radius: 16px; color: white; font-weight: 800; cursor: pointer; transition: 0.2s; font-size: 1.05rem; }
+        .action-buttons { display: flex; gap: 1rem; width: 100%; margin-top: 1.5rem; }
+        .action-buttons button { flex: 1; padding: 1.2rem 0.5rem; border: none; border-radius: 16px; color: white; font-weight: 800; cursor: pointer; font-size: 1.05rem; }
         .btn-know { background: var(--success-color); box-shadow: 0 4px 0 var(--success-hover); }
         .btn-forgot { background: var(--danger-color); box-shadow: 0 4px 0 var(--danger-hover); }
-        .action-buttons button:active { transform: translateY(3px); box-shadow: none; }
+        .action-buttons button:active { transform: translateY(4px); box-shadow: none; }
 
-        .toast { position: fixed; top: 25px; left: 50%; transform: translateX(-50%) translateY(-100px); background: #111; color: white; padding: 0.9rem 1.8rem; border-radius: 99px; transition: 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28); z-index: 9999; font-weight: 600; }
-        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast { position: fixed; top: env(safe-area-inset-top, 25px); left: 50%; transform: translateX(-50%) translateY(-100px); background: #111; color: white; padding: 0.9rem 1.8rem; border-radius: 99px; transition: 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28); z-index: 9999; font-weight: 600; white-space: nowrap; }
+        .toast.show { transform: translateX(-50%) translateY(20px); }
 
         /* ================= 统一自定义模态框 ================= */
         .modal-overlay {
             display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); 
             z-index: 2000; justify-content: center; align-items: center; animation: fadeIn 0.2s ease;
+            backdrop-filter: blur(3px);
         }
         .modal-overlay.active { display: flex; }
         .modal-content {
@@ -231,7 +251,7 @@
 
     <div id="toast" class="toast">提示信息</div>
 
-    <!-- 自定义输入弹窗 -->
+    <!-- 弹窗组件 -->
     <div id="promptModal" class="modal-overlay" onclick="window.closePromptModalOnBg(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <h3 id="promptModalTitle">提示</h3>
@@ -244,7 +264,6 @@
         </div>
     </div>
 
-    <!-- 自定义确认弹窗 -->
     <div id="confirmModal" class="modal-overlay" onclick="window.closeConfirmModalOnBg(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <h3 id="confirmModalTitle">确认操作</h3>
@@ -255,10 +274,22 @@
             </div>
         </div>
     </div>
+    
+    <!-- PWA 配置提取弹窗 -->
+    <div id="pwaModal" class="modal-overlay" onclick="window.closePwaModalOnBg(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3>🚀 PWA 深度配置</h3>
+            <p>本页已动态挂载 Manifest。如需完整的离线安装体验，请将本单页部署至 HTTPS 环境，并点击下方提取 <b>sw.js</b> 文件放于您的网站根目录。</p>
+            <div class="modal-actions" style="flex-direction: column; width:100%;">
+                <button class="btn-primary" style="width:100%; margin-bottom: 0.5rem;" onclick="window.downloadSW()">⬇️ 下载 sw.js (离线缓存核心)</button>
+                <button class="btn-neutral" style="width:100%;" onclick="window.closePwaModal()">关闭</button>
+            </div>
+        </div>
+    </div>
 
     <!-- 登录界面 -->
     <div id="loginView">
-        <button class="login-theme-btn" onclick="window.toggleTheme()" id="loginThemeBtn">🌙</button>
+        <div style="text-align:right;"><button class="login-theme-btn" onclick="window.toggleTheme()">🌙</button></div>
         <div class="login-title">💡 协作词库</div>
         <div class="login-desc">输入房间邀请码与昵称开始同步</div>
         <input type="password" id="accessCodeInput" class="login-input" placeholder="邀请码 (如: 8888)" autocomplete="off">
@@ -269,10 +300,16 @@
     <!-- 主应用 -->
     <div id="appContent">
         <header>
-            <button class="theme-btn" onclick="window.toggleTheme()" id="appThemeBtn">🌙</button>
+            <button class="theme-btn" onclick="window.toggleTheme()" style="position:absolute; left:0; top:0;">🌙</button>
             <h1>我的单词本</h1>
             <button class="logout-btn" onclick="window.logout()">退出登录</button>
             
+            <!-- PWA 专属控制台 -->
+            <div class="pwa-controls">
+                <button id="installBtn" class="btn-install" onclick="window.installPWA()">⬇️ 安装到桌面</button>
+                <button class="btn-neutral" style="padding: 0.3rem 0.8rem; border-radius: 999px; font-size: 0.75rem;" onclick="window.openPwaModal()">PWA 配置</button>
+            </div>
+
             <div class="stats-board">
                 <div class="stat-item" id="cloudStatus" onclick="window.showCloudError()">💾 连接中...</div>
                 <div class="stat-item">词库: <b id="statTotal">0</b></div>
@@ -289,14 +326,12 @@
 
         <!-- ================= 复习模式区块 ================= -->
         <div id="viewReview" class="view-section active">
-            <!-- 仅保留选择列表和卡片区域，无任何管理功能 -->
-            <select id="reviewListSelect" class="list-select" style="width:100%; padding:0.9rem; border-radius:16px; border:1px solid var(--border-color); margin-bottom:2rem; outline:none; font-weight:600;" onchange="window.handleListChange(event)"></select>
+            <select id="reviewListSelect" class="list-select" style="width:100%; padding:1rem; border-radius:16px; border:1px solid var(--border-color); margin-bottom:2rem; outline:none; font-weight:600;" onchange="window.handleListChange(event)"></select>
             <div id="reviewContainer"></div>
         </div>
 
         <!-- ================= 编辑模式区块 ================= -->
         <div id="viewEdit" class="view-section">
-            <!-- 仅保留列表管理、搜索和修改，无任何卡片 -->
             <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem; align-items:center;">
                 <h2 style="font-size:1.4rem; font-weight:800;">词库管理</h2>
                 <div style="display:flex; gap:0.6rem;">
@@ -313,24 +348,145 @@
         </div>
     </div>
 
-    <!-- 使用原生 JS + Bmob REST API -->
+    <!-- JS 逻辑 -->
     <script>
         // =====================================================================
-        // 🚀 Bmob 国内云端引擎 (免梯子、防拦截)
+        // 🚀 PWA 核心引擎注入 (Manifest & Service Worker)
+        // =====================================================================
+        
+        // 1. 动态生成 App Icon (矢量 SVG 保证各平台高清)
+        const appIconSvg = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234F46E5'/><path d='M30,70 L50,30 L70,70 M40,60 L60,60' stroke='white' stroke-width='8' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>`;
+        
+        // 2. 动态生成 Manifest JSON
+        const manifestData = {
+            "name": "极简单词本 - 协作与记忆",
+            "short_name": "极简单词",
+            "description": "极简风格的协作与个人单词记忆 PWA 应用",
+            "start_url": "./",
+            "display": "standalone",
+            "background_color": "#F3F4F6",
+            "theme_color": "#4F46E5",
+            "icons": [{ "src": appIconSvg, "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }]
+        };
+        
+        // 注入到 DOM
+        document.getElementById('manifestLink').href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifestData));
+        document.getElementById('appleTouchIcon').href = appIconSvg;
+
+        // 3. Service Worker 的完整代码 (供导出使用)
+        const SW_CODE = `// Service Worker for 极简单词本 PWA
+const CACHE_NAME = 'wordbook-cache-v1';
+const urlsToCache = ['./'];
+
+self.addEventListener('install', event => {
+    self.skipWaiting();
+    event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
+});
+
+self.addEventListener('activate', event => {
+    self.clients.claim();
+    event.waitUntil(
+        caches.keys().then(keys => Promise.all(
+            keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+        ))
+    );
+});
+
+self.addEventListener('fetch', event => {
+    if (event.request.method !== 'GET') return;
+    
+    // API 请求：网络优先，不强制缓存，保持协作数据新鲜
+    if (event.request.url.includes('api.bmobcloud.com')) {
+        event.respondWith(
+            fetch(event.request).catch(() => new Response(JSON.stringify({error: "Offline"}), {status: 503}))
+        );
+        return;
+    }
+
+    // 静态资源：缓存优先
+    event.respondWith(
+        caches.match(event.request).then(response => {
+            return response || fetch(event.request).then(fetchRes => {
+                return caches.open(CACHE_NAME).then(cache => {
+                    cache.put(event.request, fetchRes.clone());
+                    return fetchRes;
+                });
+            });
+        }).catch(() => { /* 离线降级处理 */ })
+    );
+});
+
+self.addEventListener('push', event => {
+    const data = event.data ? event.data.json() : { title: '背单词提醒', body: '快来复习今天的单词吧！' };
+    event.waitUntil(
+        self.registration.showNotification(data.title, { body: data.body, icon: '${appIconSvg}' })
+    );
+});`;
+
+        // 注册 Service Worker (如果在真实服务器环境部署了 sw.js)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(() => {
+                    console.log("提示: 未检测到根目录的 sw.js，离线缓存需通过 [PWA 配置] 提取放置。");
+                });
+            });
+        }
+
+        // PWA 安装事件拦截
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installBtn').classList.add('show');
+        });
+
+        window.installPWA = async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') document.getElementById('installBtn').classList.remove('show');
+                deferredPrompt = null;
+            }
+        };
+
+        window.openPwaModal = () => document.getElementById('pwaModal').classList.add('active');
+        window.closePwaModal = () => document.getElementById('pwaModal').classList.remove('active');
+        window.closePwaModalOnBg = (e) => { if(e.target.id === 'pwaModal') window.closePwaModal(); };
+        
+        window.downloadSW = () => {
+            const blob = new Blob([SW_CODE], { type: 'text/javascript' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'sw.js';
+            link.click();
+            window.showToast("✅ 已下载 sw.js，请放置于您的网站根目录！");
+            window.closePwaModal();
+        };
+
+        // 网络状态监听 (PWA 离线体验强化)
+        window.addEventListener('offline', () => {
+            document.getElementById('cloudStatus').innerHTML = "📴 离线模式";
+            window.showToast("已断开网络，切换至本地离线模式");
+        });
+        window.addEventListener('online', () => {
+            document.getElementById('cloudStatus').innerHTML = "🔄 重新连接...";
+            window.showToast("网络已恢复");
+            if (currentAccessCode) startBmobSync(); 
+        });
+
+        // =====================================================================
+        // 🚀 Bmob 云端引擎 (加入离线容错)
         // =====================================================================
         const BMOB_APP_ID = "4bf7d211a09a4c0b4ed139f0e90bc806";
         const BMOB_REST_KEY = "7d5ac1ddbf2694de6a23843fd1814ad0";
         const BMOB_BASE_URL = "https://api.bmobcloud.com/1/classes";
 
-        // Bmob 极速请求封装器，带有容错处理机制
         async function bmobFetch(path, method = 'GET', body = null, keepalive = false) {
+            if (!navigator.onLine) throw new Error("Offline"); // PWA 离线拦截
+            
             const options = {
                 method,
-                headers: {
-                    "X-Bmob-Application-Id": BMOB_APP_ID,
-                    "X-Bmob-REST-API-Key": BMOB_REST_KEY,
-                    "Content-Type": "application/json"
-                },
+                headers: { "X-Bmob-Application-Id": BMOB_APP_ID, "X-Bmob-REST-API-Key": BMOB_REST_KEY, "Content-Type": "application/json" },
                 keepalive: keepalive
             };
             if (body) options.body = JSON.stringify(body);
@@ -338,43 +494,23 @@
             const json = await res.json().catch(() => ({}));
             
             if (!res.ok) {
-                const errMsg = (json.error || '').toLowerCase();
-                // 自动处理 Bmob 初次建表时抛出的 400/404 或 object not found 错误
-                const isNotFound = json.code === 101 || errMsg.includes('not found');
-                if (method === 'GET' && isNotFound) {
-                    return { results: [] }; 
-                }
+                const isNotFound = json.code === 101 || (json.error||'').toLowerCase().includes('not found');
+                if (method === 'GET' && isNotFound) return { results: [] }; 
                 throw new Error(json.error || `HTTP Error ${res.status}`);
             }
             return json;
         }
 
         // --- 全局状态 ---
-        let currentAccessCode = "";
-        let currentNickname = "";
-        let myUserId = ""; // 替代 Firebase Auth 的设备唯一标识
-        let myPresenceObjId = null; // 记录当前设备的在线状态记录ID
-        
+        let currentAccessCode = ""; let currentNickname = ""; let myUserId = ""; let myPresenceObjId = null;
         let appData = { lists: [{id:'default', name:'默认分组'}], words: [], activeListId: 'default', stats: { date: '', reviewedCount: 0 } };
-        let reviewQueue = [];
-        let expandedListId = null;
-        let cloudErrorMsg = ""; 
-        let isPushingData = false; // 防止拉取数据覆盖正在推送的数据
-        let syncTimer = null;
-        let presenceTimer = null;
+        let reviewQueue = []; let expandedListId = null; let cloudErrorMsg = ""; 
+        let isPushingData = false; let syncTimer = null; let presenceTimer = null;
 
-        // =====================================================================
-        // 🧹 安全退出/离开自动清理机制 (重要更新)
-        // =====================================================================
-        
-        // 监听浏览器/标签页关闭、刷新或锁屏，立即删除云端的在线状态记录
         window.addEventListener('pagehide', () => {
-            if (myPresenceObjId) {
-                bmobFetch(`/Presence/${myPresenceObjId}`, 'DELETE', null, true).catch(() => {});
-            }
+            if (myPresenceObjId && navigator.onLine) bmobFetch(`/Presence/${myPresenceObjId}`, 'DELETE', null, true).catch(() => {});
         });
 
-        // --- 数据净化 ---
         function sanitizeData(data) {
             if (!data) data = {};
             if (!data.lists || !Array.isArray(data.lists) || data.lists.length === 0) data.lists = [{id:'default', name:'默认分组'}];
@@ -384,17 +520,15 @@
             return data;
         }
 
-        // --- 全局弹窗逻辑 ---
+        // --- 弹窗逻辑 ---
         let currentPromptCallback = null;
         window.openPrompt = function(title, desc, placeholder, onConfirm) {
             document.getElementById('promptModalTitle').innerText = title;
             document.getElementById('promptModalDesc').innerText = desc;
             const input = document.getElementById('promptModalInput');
-            input.placeholder = placeholder;
-            input.value = '';
+            input.placeholder = placeholder; input.value = '';
             document.getElementById('promptModal').classList.add('active');
-            input.focus();
-            currentPromptCallback = onConfirm;
+            input.focus(); currentPromptCallback = onConfirm;
         };
         window.submitPrompt = function() {
             const val = document.getElementById('promptModalInput').value;
@@ -420,38 +554,31 @@
 
         window.showCloudError = function() {
             const statusText = document.getElementById('cloudStatus').innerText;
-            if(cloudErrorMsg) {
-                window.openConfirm("云端异常排查", "当前状态：" + statusText + "\n报错信息：" + cloudErrorMsg, null);
-            } else {
-                window.openConfirm("云端状态", "当前状态：" + statusText + "\n\n💡 提示：我们现已使用国内直连云服务，无需梯子即可自动同步！", null);
-            }
+            window.openConfirm("云端排查", "状态：" + statusText + "\n" + (cloudErrorMsg ? "报错：" + cloudErrorMsg : "💡 提示：云同步正常运行中。若离线也可继续背单词！"), null);
         };
 
         // --- 初始化入口 ---
         window.onload = () => {
-            // 获取或生成设备专属 User ID
-            myUserId = localStorage.getItem('wb_uid');
-            if (!myUserId) {
-                myUserId = 'u_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-                localStorage.setItem('wb_uid', myUserId);
+            myUserId = localStorage.getItem('wb_uid') || ('u_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5));
+            localStorage.setItem('wb_uid', myUserId);
+            
+            // PWA 主题色初始化同步
+            if(localStorage.getItem('wb_theme')==='dark') {
+                document.documentElement.classList.add('dark');
+                document.getElementById('themeColorMeta').content = '#111827';
             }
 
-            if (localStorage.getItem('wb_granted') === 'true') {
-                unlockApp();
-            } else {
-                document.getElementById('loginView').classList.add('active');
-            }
+            if (localStorage.getItem('wb_granted') === 'true') unlockApp();
+            else document.getElementById('loginView').classList.add('active');
         };
 
         window.verifyAccess = () => {
             const code = document.getElementById('accessCodeInput').value.trim();
             const nick = document.getElementById('nicknameInput').value.trim();
-            
-            // 定义允许的邀请码白名单
             const validCodes = ['wangruizhe', 'gongchenqi', 'luoyinli', 'zhanlin'];
             
             if (!code || !nick) return window.showToast("请输入邀请码和昵称");
-            if (!validCodes.includes(code)) return window.showToast("邀请码不正确，请重新输入");
+            if (!validCodes.includes(code)) return window.showToast("邀请码不正确");
             
             localStorage.setItem('wb_granted', 'true');
             localStorage.setItem('wb_code', code);
@@ -468,185 +595,106 @@
             const localData = localStorage.getItem('wb_data');
             if (localData) appData = sanitizeData(JSON.parse(localData));
             
-            window.updateStatsUI();
-            window.renderReviewSelect();
-            window.initReviewSession();
-
-            // 启动 Bmob 引擎
-            startBmobSync();
-            startBmobPresence();
+            window.updateStatsUI(); window.renderReviewSelect(); window.initReviewSession();
+            if (navigator.onLine) { startBmobSync(); startBmobPresence(); }
+            else document.getElementById('cloudStatus').innerHTML = "📴 离线模式";
         }
 
-        // =====================================================================
-        // ☁️ Bmob 同步引擎逻辑
-        // =====================================================================
         function startBmobSync() {
             const statusEl = document.getElementById('cloudStatus');
             statusEl.innerHTML = "🔄 连接云端...";
-
             async function pullData() {
-                if (isPushingData) return; // 本地正在操作时，暂停拉取以防覆盖
+                if (isPushingData || !navigator.onLine) return;
                 try {
-                    // 查询该房间是否已有数据
                     const queryObj = { roomCode: currentAccessCode };
                     const res = await bmobFetch(`/RoomData?where=${encodeURIComponent(JSON.stringify(queryObj))}`);
                     
-                    statusEl.innerHTML = "☁️ 云端同步";
-                    cloudErrorMsg = "";
-
+                    statusEl.innerHTML = "☁️ 云端同步"; cloudErrorMsg = "";
                     if (res.results && res.results.length > 0) {
                         const cloudDataStr = res.results[0].dataStr;
-                        const localDataStr = JSON.stringify(appData);
-                        
-                        // 仅当云端数据与本地不同时，才触发视图更新
-                        if (cloudDataStr !== localDataStr) {
+                        if (cloudDataStr !== JSON.stringify(appData)) {
                             appData = sanitizeData(JSON.parse(cloudDataStr));
-                            saveLocal();
-                            window.updateStatsUI();
-                            if (document.getElementById('viewEdit').classList.contains('active')) {
-                                window.renderEditAccordions();
-                            } else { 
-                                window.renderReviewSelect(); 
-                                window.renderReviewCard(); 
-                            }
+                            saveLocal(); window.updateStatsUI();
+                            document.getElementById('viewEdit').classList.contains('active') ? window.renderEditAccordions() : (window.renderReviewSelect(), window.renderReviewCard());
                         }
-                    } else {
-                        // 房间为空，主动把本地数据推上去建库
-                        pushToCloud();
-                    }
-                } catch(e) {
-                    cloudErrorMsg = e.message;
-                    statusEl.innerHTML = "⚠️ 连接异常";
-                }
+                    } else pushToCloud();
+                } catch(e) { cloudErrorMsg = e.message; statusEl.innerHTML = e.message==="Offline" ? "📴 离线模式" : "⚠️ 连接异常"; }
             }
-
-            pullData(); // 立即执行一次
+            pullData();
             if (syncTimer) clearInterval(syncTimer);
-            syncTimer = setInterval(pullData, 3000); // 每 3 秒拉取一次，形成实时假象
+            syncTimer = setInterval(pullData, 3000);
         }
 
         async function pushToCloud() {
-            if (!currentAccessCode) return;
-            isPushingData = true; // 锁定状态，防冲突
-            
+            if (!currentAccessCode || !navigator.onLine) return;
+            isPushingData = true;
             try {
                 const dataStr = JSON.stringify(appData);
                 const queryObj = { roomCode: currentAccessCode };
                 const res = await bmobFetch(`/RoomData?where=${encodeURIComponent(JSON.stringify(queryObj))}`);
                 
                 if (res.results && res.results.length > 0) {
-                    // 更新已有记录
-                    const objId = res.results[0].objectId;
-                    try {
-                        await bmobFetch(`/RoomData/${objId}`, 'PUT', { dataStr });
-                    } catch (putErr) {
-                        if ((putErr.message || '').toLowerCase().includes('not found')) {
-                            await bmobFetch(`/RoomData`, 'POST', { roomCode: currentAccessCode, dataStr });
-                        } else throw putErr;
-                    }
-                } else {
-                    // 创建新房间记录
-                    await bmobFetch(`/RoomData`, 'POST', { roomCode: currentAccessCode, dataStr });
-                }
-            } catch(e) {
-                console.error("数据推送云端失败:", e);
-                window.showToast("☁️ 正在排队同步...");
-            } finally {
-                // 延迟解除锁定，确保云端已经消化完数据
-                setTimeout(() => { isPushingData = false; }, 1000);
-            }
+                    try { await bmobFetch(`/RoomData/${res.results[0].objectId}`, 'PUT', { dataStr }); } 
+                    catch (err) { if ((err.message||'').includes('not found')) await bmobFetch(`/RoomData`, 'POST', { roomCode: currentAccessCode, dataStr }); }
+                } else await bmobFetch(`/RoomData`, 'POST', { roomCode: currentAccessCode, dataStr });
+            } catch(e) { console.error(e); } 
+            finally { setTimeout(() => { isPushingData = false; }, 1000); }
         }
 
         function startBmobPresence() {
             async function heartbeat() {
+                if (!navigator.onLine) return;
                 try {
                     const now = Date.now();
-                    // 1. 更新自己的心跳并记录 objId 以备退出时销毁
                     const queryMe = { roomCode: currentAccessCode, userId: myUserId };
                     const resMe = await bmobFetch(`/Presence?where=${encodeURIComponent(JSON.stringify(queryMe))}`);
                     
                     if (resMe.results && resMe.results.length > 0) {
                         myPresenceObjId = resMe.results[0].objectId;
-                        try {
-                            await bmobFetch(`/Presence/${myPresenceObjId}`, 'PUT', { nick: currentNickname, lastActive: now });
-                        } catch (putErr) {
-                            if ((putErr.message || '').toLowerCase().includes('not found')) {
-                                const postRes = await bmobFetch(`/Presence`, 'POST', { roomCode: currentAccessCode, userId: myUserId, nick: currentNickname, lastActive: now });
-                                myPresenceObjId = postRes.objectId;
-                            } else throw putErr;
-                        }
-                    } else {
-                        const postRes = await bmobFetch(`/Presence`, 'POST', { roomCode: currentAccessCode, userId: myUserId, nick: currentNickname, lastActive: now });
-                        myPresenceObjId = postRes.objectId;
-                    }
+                        try { await bmobFetch(`/Presence/${myPresenceObjId}`, 'PUT', { nick: currentNickname, lastActive: now }); } 
+                        catch (err) { if ((err.message||'').includes('not found')) myPresenceObjId = (await bmobFetch(`/Presence`, 'POST', { roomCode: currentAccessCode, userId: myUserId, nick: currentNickname, lastActive: now })).objectId; }
+                    } else myPresenceObjId = (await bmobFetch(`/Presence`, 'POST', { roomCode: currentAccessCode, userId: myUserId, nick: currentNickname, lastActive: now })).objectId;
 
-                    // 2. 拉取房间内所有人的状态
-                    const queryRoom = { roomCode: currentAccessCode };
-                    const resRoom = await bmobFetch(`/Presence?where=${encodeURIComponent(JSON.stringify(queryRoom))}`);
-                    
-                    const list = document.getElementById('presenceList');
-                    
-                    // 【优化】：过滤出真正在线的人，隐藏因为断网/强退导致的陈旧离线记录 (超时2秒隐藏)
-                    const activeUsers = resRoom.results.filter(d => (now - d.lastActive) < 2000);
-                    
-                    const html = activeUsers.map(d => {
-                        return `<div class="user-presence"><span class="status-dot online"></span>${d.nick}</div>`;
-                    }).join('');
-                    
-                    list.innerHTML = `<div class="presence-title">👥 正在房间的人：</div>` + (html || '<div style="color:var(--text-muted); font-size:0.8rem; padding: 0.3rem;">房间暂时没有其他人</div>');
-                } catch(e) {
-                    console.warn("状态刷新连接提示:", e.message);
-                }
+                    const resRoom = await bmobFetch(`/Presence?where=${encodeURIComponent(JSON.stringify({ roomCode: currentAccessCode }))}`);
+                    const activeUsers = resRoom.results.filter(d => (now - d.lastActive) < 3000); // 放宽至 3 秒避免抖动
+                    document.getElementById('presenceList').innerHTML = `<div style="width:100%;text-align:center;font-size:0.8rem;color:var(--text-muted);margin-bottom:0.3rem;">👥 正在房间：</div>` + 
+                        (activeUsers.map(d => `<div class="user-presence"><span class="status-dot online"></span>${d.nick}</div>`).join('') || '<div style="color:var(--text-muted); font-size:0.8rem;">房间暂时没有其他人</div>');
+                } catch(e) {}
             }
-
             heartbeat();
             if (presenceTimer) clearInterval(presenceTimer);
-            presenceTimer = setInterval(heartbeat, 1000); // 每 1 秒刷新一次人员列表，确保 2 秒超时机制正常工作
+            presenceTimer = setInterval(heartbeat, 1500);
         }
 
         // =====================================================================
-        // 核心业务逻辑 (UI交互)
+        // UI 交互逻辑
         // =====================================================================
         window.switchMode = (m) => {
             document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
             document.getElementById('btnMode' + (m==='review'?'Review':'Edit')).classList.add('active');
             document.getElementById('view' + (m==='review'?'Review':'Edit')).classList.add('active');
-            if(m==='edit') {
-                window.renderEditAccordions(); 
-            } else { 
-                window.renderReviewSelect(); 
-                window.initReviewSession(); 
-            }
+            if(m==='edit') window.renderEditAccordions(); else { window.renderReviewSelect(); window.initReviewSession(); }
+            window.scrollTo({top: 0, behavior: 'smooth'}); // PWA: 切换视图时回到顶部
         };
 
         window.speak = (t, e) => {
             if(e) e.stopPropagation();
+            if(!navigator.onLine) return window.showToast("📴 离线模式下无法发音");
             const btn = e?.currentTarget || document.querySelector('.tts-btn');
             if (btn) btn.classList.add('playing');
             const audio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(t)}&type=2`);
-            audio.onended = () => btn.classList.remove('playing');
-            audio.onerror = () => btn.classList.remove('playing');
+            audio.onended = () => btn.classList.remove('playing'); audio.onerror = () => btn.classList.remove('playing');
             audio.play().catch(() => btn.classList.remove('playing'));
         };
 
-        function performSearch(query) {
-            const q = query.trim().toLowerCase();
-            if (!q) return [];
-            const isEnglish = /^[a-zA-Z\s]+$/.test(q);
-            return appData.words.filter(w => {
-                if (isEnglish) return w.word.toLowerCase().startsWith(q); // 英文前缀匹配
-                return w.meaning.toLowerCase().includes(q); // 中文包含匹配
-            });
-        }
-
         window.handleSearchInput = (e) => {
-            const q = e.target.value;
+            const q = e.target.value.trim().toLowerCase();
             const resArea = document.getElementById('searchResults');
             const accArea = document.getElementById('accordionGroup');
-            if (!q.trim()) { resArea.style.display = 'none'; accArea.style.display = 'block'; return; }
+            if (!q) { resArea.style.display = 'none'; accArea.style.display = 'block'; return; }
             resArea.style.display = 'block'; accArea.style.display = 'none';
-            const matched = performSearch(q);
+            const matched = appData.words.filter(w => (/^[a-z\s]+$/.test(q) ? w.word.toLowerCase().startsWith(q) : w.meaning.toLowerCase().includes(q)));
             resArea.innerHTML = matched.map(w => `
                 <div class="edit-word-item" style="background:var(--card-bg); border-radius:16px; margin-bottom:0.8rem; border:1px solid var(--border-color); padding:1.2rem;">
                     <div class="edit-word-info"><b>${w.word}</b><span>${w.meaning}</span>${w.note?`<small>${w.note}</small>`:''}</div>
@@ -655,50 +703,32 @@
             `).join('') || '<div style="text-align:center; padding:3rem; color:gray;">无结果</div>';
         };
 
-        // --- 渲染复习模式卡片 (完美还原背部排版要求) ---
         window.renderReviewCard = () => {
             const area = document.getElementById('reviewContainer');
             const currentListWords = appData.words.filter(w => w.listId === appData.activeListId);
             
-            if (!currentListWords.length) { 
-                area.innerHTML = "<div style='text-align:center; padding:4rem; color:var(--text-muted); background:white; border-radius:28px;'><h2>列表暂无单词</h2><p style='margin-top:1rem;'>请去编辑模式添加单词吧！</p></div>"; 
-                return; 
-            }
-            if (!reviewQueue.length) { 
-                area.innerHTML = "<div style='text-align:center; padding:4rem; color:var(--text-muted); background:white; border-radius:28px;'><h2>🎉 复习完毕</h2><p style='margin-top:1rem;'>当前分组已全部掌握。</p><button class='btn-primary' style='margin-top:2rem;' onclick='window.initReviewSession()'>重新复习</button></div>"; 
-                return; 
-            }
+            if (!currentListWords.length) { area.innerHTML = "<div style='text-align:center; padding:4rem 2rem; color:var(--text-muted); background:var(--card-bg); border-radius:28px;'><h2>列表暂无单词</h2><p style='margin-top:1rem;'>请去编辑模式添加单词吧！</p></div>"; return; }
+            if (!reviewQueue.length) { area.innerHTML = "<div style='text-align:center; padding:4rem 2rem; color:var(--text-muted); background:var(--card-bg); border-radius:28px;'><h2>🎉 复习完毕</h2><p style='margin-top:1rem;'>当前分组已全部掌握。</p><button class='btn-primary' style='margin-top:2rem;' onclick='window.initReviewSession()'>重新复习</button></div>"; return; }
             
             const w = reviewQueue[0];
             area.innerHTML = `
                 <div class="flip-container">
                     <div class="card-flipper" id="flipper" onclick="this.classList.toggle('flipped')">
-                        <!-- 卡片正面 -->
                         <div class="card-front">
                             <div style="position:absolute; top:25px; right:25px; font-size:0.85rem; color:var(--text-muted); font-weight:700;">待复习: ${reviewQueue.length}</div>
                             <div class="word-en-large">${w.word}</div>
-                            <button class="tts-btn" onclick="window.speak('${w.word}', event)">🔊</button>
+                            <button class="tts-btn" onclick="window.speak('${w.word}', event)" style="margin-top:1rem;">🔊</button>
                             <div style="margin-top:3.5rem; color:var(--text-muted); font-size:0.95rem; animation: pulse-online 2s infinite;">点击翻面查看释义</div>
                         </div>
-
-                        <!-- 卡片背面 (严格按照要求排版) -->
                         <div class="card-back" onclick="event.stopPropagation()">
                             <div style="width:100%; text-align:center; flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                                
-                                <!-- 第一行：原词 + 喇叭 -->
-                                <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:1.5rem;">
-                                    <span class="word-en-large" style="margin-bottom:0;">${w.word}</span>
+                                <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:1.5rem; width:100%;">
+                                    <span class="word-en-large" style="margin-bottom:0; font-size:2.5rem;">${w.word}</span>
                                     <button class="tts-btn" onclick="window.speak('${w.word}', event)">🔊</button>
                                 </div>
-                                
-                                <!-- 第二行：词义解释 -->
                                 <div class="word-zh-large">${w.meaning}</div>
-                                
-                                <!-- 第三行：注释内容 (如有) -->
                                 ${w.note ? `<div class="word-note-display">${w.note}</div>` : ''}
-
                             </div>
-                            
                             <div class="action-buttons">
                                 <button class="btn-forgot" onclick="window.handleReview(false)">不认识</button>
                                 <button class="btn-know" onclick="window.handleReview(true)">掌握了</button>
@@ -717,10 +747,8 @@
             saveLocal(); pushToCloud(); window.updateStatsUI(); window.renderReviewCard();
         };
 
-        // --- 渲染编辑模式 ---
         window.renderEditAccordions = () => {
-            const group = document.getElementById('accordionGroup');
-            group.innerHTML = appData.lists.map(l => {
+            document.getElementById('accordionGroup').innerHTML = appData.lists.map(l => {
                 const words = appData.words.filter(w => w.listId === l.id);
                 return `
                 <div class="accordion-item ${expandedListId===l.id?'expanded':''}">
@@ -751,14 +779,9 @@
         window.createNewList = () => {
             window.openPrompt("新建分组", "给新词库起个名字", "例如: 雅思核心词汇", (n) => {
                 if(n && n.trim()) { 
-                    const newList = {id:'l'+Date.now(), name:n.trim()};
-                    appData.lists.push(newList); 
-                    expandedListId = newList.id; // 自动展开新分组
-                    saveLocal(); 
-                    pushToCloud(); 
-                    window.renderEditAccordions(); 
-                    window.renderReviewSelect(); 
-                    window.showToast("新分组已创建 ✨");
+                    const newList = {id:'l'+Date.now(), name:n.trim()}; appData.lists.push(newList); 
+                    expandedListId = newList.id; saveLocal(); pushToCloud(); 
+                    window.renderEditAccordions(); window.renderReviewSelect(); window.showToast("新分组已创建 ✨");
                 }
             });
         };
@@ -770,77 +793,48 @@
             if(!e || !z) return window.showToast("请完整填写单词和释义");
             appData.words.push({id:Date.now(), listId:lid, word:e, meaning:z, note:n});
             
-            // 添加后清空输入框
-            document.getElementById('en_'+lid).value = '';
-            document.getElementById('zh_'+lid).value = '';
-            document.getElementById('note_'+lid).value = '';
-
-            saveLocal(); 
-            pushToCloud(); 
-            window.renderEditAccordions();
-            
-            setTimeout(() => {
-                const newEnInput = document.getElementById(`en_${lid}`);
-                if (newEnInput) newEnInput.focus();
-            }, 0);
+            document.getElementById('en_'+lid).value = ''; document.getElementById('zh_'+lid).value = ''; document.getElementById('note_'+lid).value = '';
+            saveLocal(); pushToCloud(); window.renderEditAccordions();
+            setTimeout(() => { const i = document.getElementById(`en_${lid}`); if (i) i.focus(); }, 0); // 移动端自动聚焦保持键盘唤起
         };
 
         window.delWord = (id) => { 
-            window.openConfirm("删除单词", "确定要将这个单词从词库中移除吗？", () => {
-                appData.words = appData.words.filter(w=>w.id!==id); 
-                saveLocal(); 
-                pushToCloud(); 
-                if(document.getElementById('searchInput').value) {
-                    window.handleSearchInput({target:document.getElementById('searchInput')}); 
-                } else {
-                    window.renderEditAccordions(); 
-                }
+            window.openConfirm("删除单词", "确定要将这个单词移除吗？", () => {
+                appData.words = appData.words.filter(w=>w.id!==id); saveLocal(); pushToCloud(); 
+                document.getElementById('searchInput').value ? window.handleSearchInput({target:document.getElementById('searchInput')}) : window.renderEditAccordions(); 
             });
         };
 
         window.delList = (id) => { 
             if(appData.lists.length <= 1) return window.showToast("至少需要保留一个分组哦"); 
-            window.openConfirm("删除分组", "确定要删除该分组及其全部单词吗？此操作不可恢复。", () => {
-                appData.lists = appData.lists.filter(l=>l.id!==id); 
-                appData.words = appData.words.filter(w=>w.listId!==id); 
+            window.openConfirm("删除分组", "确定要删除该分组及其全部单词吗？不可恢复。", () => {
+                appData.lists = appData.lists.filter(l=>l.id!==id); appData.words = appData.words.filter(w=>w.listId!==id); 
                 if(appData.activeListId === id) appData.activeListId = appData.lists[0].id;
-                saveLocal(); 
-                pushToCloud(); 
-                window.renderEditAccordions(); 
-                window.renderReviewSelect();
+                saveLocal(); pushToCloud(); window.renderEditAccordions(); window.renderReviewSelect();
             });
         };
 
         window.toggleAccordion = (id) => { expandedListId = (expandedListId === id ? null : id); window.renderEditAccordions(); };
-        
-        window.updateStatsUI = () => {
-            document.getElementById('statTotal').innerText = appData.words.length;
-            document.getElementById('statToday').innerText = (appData.stats.date === new Date().toDateString()) ? appData.stats.reviewedCount : 0;
-        };
-        
-        window.renderReviewSelect = () => {
-            document.getElementById('reviewListSelect').innerHTML = appData.lists.map(l => `<option value="${l.id}" ${l.id===appData.activeListId?'selected':''}>${l.name}</option>`).join('');
-        };
-        
+        window.updateStatsUI = () => { document.getElementById('statTotal').innerText = appData.words.length; document.getElementById('statToday').innerText = (appData.stats.date === new Date().toDateString()) ? appData.stats.reviewedCount : 0; };
+        window.renderReviewSelect = () => { document.getElementById('reviewListSelect').innerHTML = appData.lists.map(l => `<option value="${l.id}" ${l.id===appData.activeListId?'selected':''}>${l.name}</option>`).join(''); };
         window.handleListChange = (e) => { appData.activeListId = e.target.value; saveLocal(); window.initReviewSession(); };
         window.initReviewSession = () => { reviewQueue = [...appData.words.filter(w => w.listId === appData.activeListId)]; window.renderReviewCard(); };
         
-        window.toggleTheme = () => { const d = document.documentElement.classList.toggle('dark'); localStorage.setItem('wb_theme', d?'dark':'light'); };
-        if(localStorage.getItem('wb_theme')==='dark') document.documentElement.classList.add('dark');
+        window.toggleTheme = () => { 
+            const d = document.documentElement.classList.toggle('dark'); 
+            localStorage.setItem('wb_theme', d?'dark':'light'); 
+            // 动态修改 PWA 状态栏颜色
+            document.getElementById('themeColorMeta').content = d ? '#111827' : '#F3F4F6';
+        };
         
         window.logout = () => { 
             window.openConfirm("退出登录", "退出后将需要重新输入房间邀请码，确定要退出吗？", async () => {
-                // 退出时优先主动销毁在线状态记录
-                if (myPresenceObjId) {
-                    await bmobFetch(`/Presence/${myPresenceObjId}`, 'DELETE', null, true).catch(() => {});
-                }
-                localStorage.clear(); 
-                location.reload(); 
+                if (myPresenceObjId && navigator.onLine) await bmobFetch(`/Presence/${myPresenceObjId}`, 'DELETE', null, true).catch(() => {});
+                localStorage.clear(); location.reload(); 
             });
         };
 
         window.showToast = (m) => { const t = document.getElementById('toast'); t.innerText = m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3000); };
-        
         function saveLocal() { localStorage.setItem('wb_data', JSON.stringify(appData)); }
     </script>
 </body>
