@@ -10,8 +10,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="极简单词">
     
-    <!-- 动态注入 Manifest 和 Icon -->
-    <link rel="apple-touch-icon" id="appleTouchIcon" href="">
+    <!-- 🍎 明确指定 iOS 高清图标 (关键修复) 🍎 -->
+    <link rel="apple-touch-icon" href="./icon.png">
+    
+    <!-- 动态注入 Manifest -->
     <link rel="manifest" id="manifestLink" href="">
     
     <title>极简单词本</title>
@@ -34,17 +36,13 @@
         /* PWA: 移除点击高亮，防止页面下拉溢出 */
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         
-        html, body {
-            overscroll-behavior-y: none; /* 阻止 iOS/Android 下拉刷新，提升原生感 */
-        }
+        html, body { overscroll-behavior-y: none; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-main);
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
+            display: flex; justify-content: center; align-items: flex-start;
             /* 适配刘海屏安全区域 */
             padding: calc(env(safe-area-inset-top, 0px) + 2rem) 1rem calc(env(safe-area-inset-bottom, 0px) + 2rem);
             min-height: 100vh;
@@ -103,8 +101,8 @@
             border-radius: 28px; background: var(--card-bg); padding: 2.5rem 1.5rem;
             box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); display: flex;
             flex-direction: column; align-items: center; border: 1px solid var(--border-color);
-            -webkit-backface-visibility: hidden; /* Safari Fix */
-            transform: translateZ(0); /* 开启硬件加速 */
+            -webkit-backface-visibility: hidden;
+            transform: translateZ(0);
         }
         .card-front { justify-content: center; }
         .card-back { transform: rotateY(180deg); justify-content: space-between; }
@@ -156,32 +154,23 @@
         .mode-btn.active { background: var(--card-bg); color: var(--primary-color); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         
         @media (max-width: 600px) {
-            /* 移动端吸底导航 */
             .mode-toggle {
-                position: fixed;
-                bottom: env(safe-area-inset-bottom, 20px);
-                left: 50%;
-                transform: translateX(-50%);
-                width: calc(100% - 2rem);
-                margin: 0;
-                z-index: 1000;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-                backdrop-filter: blur(10px);
-                background: rgba(229, 231, 235, 0.85);
+                position: fixed; bottom: env(safe-area-inset-bottom, 20px); left: 50%; transform: translateX(-50%);
+                width: calc(100% - 2rem); margin: 0; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+                backdrop-filter: blur(10px); background: rgba(229, 231, 235, 0.85);
             }
             :root.dark .mode-toggle { background: rgba(55, 65, 81, 0.85); }
-            #appContent { padding-bottom: 80px; } /* 留出底部空间 */
+            #appContent { padding-bottom: 80px; }
         }
 
         /* --- PWA 安装按钮 --- */
         .pwa-controls { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
         .btn-install { 
-            display: none; background: linear-gradient(135deg, var(--primary-color), var(--success-color));
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--success-color));
             color: white; border: none; padding: 0.4rem 1.2rem; border-radius: 999px; 
             font-size: 0.85rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            animation: pulse-online 2s infinite;
         }
-        .btn-install.show { display: inline-flex; align-items: center; gap: 0.3rem; }
 
         /* --- 视图区块切换 --- */
         .view-section { display: none; animation: fadeIn 0.3s ease; }
@@ -279,9 +268,8 @@
     <div id="pwaModal" class="modal-overlay" onclick="window.closePwaModalOnBg(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <h3>🚀 PWA 深度配置</h3>
-            <p>本页已动态挂载 Manifest。如需完整的离线安装体验，请将本单页部署至 HTTPS 环境，并点击下方提取 <b>sw.js</b> 文件放于您的网站根目录。</p>
+            <p>如需支持离线体验，请确保 <b>sw.js</b> 文件放于您的网站根目录。</p>
             <div class="modal-actions" style="flex-direction: column; width:100%;">
-                <button class="btn-primary" style="width:100%; margin-bottom: 0.5rem;" onclick="window.downloadSW()">⬇️ 下载 sw.js (离线缓存核心)</button>
                 <button class="btn-neutral" style="width:100%;" onclick="window.closePwaModal()">关闭</button>
             </div>
         </div>
@@ -306,7 +294,7 @@
             
             <!-- PWA 专属控制台 -->
             <div class="pwa-controls">
-                <button id="installBtn" class="btn-install" onclick="window.installPWA()">⬇️ 安装到桌面</button>
+                <button id="installBtn" class="btn-install" onclick="window.installPWA()">⬇️ 安装到桌面 (安卓/PC)</button>
                 <button class="btn-neutral" style="padding: 0.3rem 0.8rem; border-radius: 999px; font-size: 0.75rem;" onclick="window.openPwaModal()">PWA 配置</button>
             </div>
 
@@ -324,13 +312,11 @@
             <button class="mode-btn" id="btnModeEdit" onclick="window.switchMode('edit')">编辑模式</button>
         </div>
 
-        <!-- ================= 复习模式区块 ================= -->
         <div id="viewReview" class="view-section active">
             <select id="reviewListSelect" class="list-select" style="width:100%; padding:1rem; border-radius:16px; border:1px solid var(--border-color); margin-bottom:2rem; outline:none; font-weight:600;" onchange="window.handleListChange(event)"></select>
             <div id="reviewContainer"></div>
         </div>
 
-        <!-- ================= 编辑模式区块 ================= -->
         <div id="viewEdit" class="view-section">
             <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem; align-items:center;">
                 <h2 style="font-size:1.4rem; font-weight:800;">词库管理</h2>
@@ -354,10 +340,7 @@
         // 🚀 PWA 核心引擎注入 (Manifest & Service Worker)
         // =====================================================================
         
-        // 1. 动态生成 App Icon (矢量 SVG 保证各平台高清)
-        const appIconSvg = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234F46E5'/><path d='M30,70 L50,30 L70,70 M40,60 L60,60' stroke='white' stroke-width='8' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>`;
-        
-        // 2. 动态生成 Manifest JSON
+        // 动态生成 Manifest JSON (强制使用您上传的 icon.png)
         const manifestData = {
             "name": "极简单词本 - 协作与记忆",
             "short_name": "极简单词",
@@ -366,68 +349,17 @@
             "display": "standalone",
             "background_color": "#F3F4F6",
             "theme_color": "#4F46E5",
-            "icons": [{ "src": appIconSvg, "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }]
+            "icons": [{ "src": "./icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
         };
         
         // 注入到 DOM
         document.getElementById('manifestLink').href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifestData));
-        document.getElementById('appleTouchIcon').href = appIconSvg;
 
-        // 3. Service Worker 的完整代码 (供导出使用)
-        const SW_CODE = `// Service Worker for 极简单词本 PWA
-const CACHE_NAME = 'wordbook-cache-v1';
-const urlsToCache = ['./'];
-
-self.addEventListener('install', event => {
-    self.skipWaiting();
-    event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
-});
-
-self.addEventListener('activate', event => {
-    self.clients.claim();
-    event.waitUntil(
-        caches.keys().then(keys => Promise.all(
-            keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-        ))
-    );
-});
-
-self.addEventListener('fetch', event => {
-    if (event.request.method !== 'GET') return;
-    
-    // API 请求：网络优先，不强制缓存，保持协作数据新鲜
-    if (event.request.url.includes('api.bmobcloud.com')) {
-        event.respondWith(
-            fetch(event.request).catch(() => new Response(JSON.stringify({error: "Offline"}), {status: 503}))
-        );
-        return;
-    }
-
-    // 静态资源：缓存优先
-    event.respondWith(
-        caches.match(event.request).then(response => {
-            return response || fetch(event.request).then(fetchRes => {
-                return caches.open(CACHE_NAME).then(cache => {
-                    cache.put(event.request, fetchRes.clone());
-                    return fetchRes;
-                });
-            });
-        }).catch(() => { /* 离线降级处理 */ })
-    );
-});
-
-self.addEventListener('push', event => {
-    const data = event.data ? event.data.json() : { title: '背单词提醒', body: '快来复习今天的单词吧！' };
-    event.waitUntil(
-        self.registration.showNotification(data.title, { body: data.body, icon: '${appIconSvg}' })
-    );
-});`;
-
-        // 注册 Service Worker (如果在真实服务器环境部署了 sw.js)
+        // 注册 Service Worker 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js').catch(() => {
-                    console.log("提示: 未检测到根目录的 sw.js，离线缓存需通过 [PWA 配置] 提取放置。");
+                    console.log("提示: 未检测到根目录的 sw.js");
                 });
             });
         }
@@ -437,33 +369,27 @@ self.addEventListener('push', event => {
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            document.getElementById('installBtn').classList.add('show');
         });
 
         window.installPWA = async () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') document.getElementById('installBtn').classList.remove('show');
                 deferredPrompt = null;
+            } else {
+                window.openConfirm(
+                    "💡 桌面安装指南", 
+                    "由于当前浏览器的限制，无法自动拉起安装。\n\n👉 请点击浏览器右上角（或底栏）的【分享 ⬆️】或【菜单】图标，找到【添加到主屏幕】即可生成桌面图标！", 
+                    null
+                );
             }
         };
 
         window.openPwaModal = () => document.getElementById('pwaModal').classList.add('active');
         window.closePwaModal = () => document.getElementById('pwaModal').classList.remove('active');
         window.closePwaModalOnBg = (e) => { if(e.target.id === 'pwaModal') window.closePwaModal(); };
-        
-        window.downloadSW = () => {
-            const blob = new Blob([SW_CODE], { type: 'text/javascript' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'sw.js';
-            link.click();
-            window.showToast("✅ 已下载 sw.js，请放置于您的网站根目录！");
-            window.closePwaModal();
-        };
 
-        // 网络状态监听 (PWA 离线体验强化)
+        // 网络状态监听
         window.addEventListener('offline', () => {
             document.getElementById('cloudStatus').innerHTML = "📴 离线模式";
             window.showToast("已断开网络，切换至本地离线模式");
@@ -475,30 +401,42 @@ self.addEventListener('push', event => {
         });
 
         // =====================================================================
-        // 🚀 Bmob 云端引擎 (加入离线容错)
+        // 🚀 Bmob 云端引擎 (加入离线容错与超时防护)
         // =====================================================================
         const BMOB_APP_ID = "4bf7d211a09a4c0b4ed139f0e90bc806";
         const BMOB_REST_KEY = "7d5ac1ddbf2694de6a23843fd1814ad0";
         const BMOB_BASE_URL = "https://api.bmobcloud.com/1/classes";
 
         async function bmobFetch(path, method = 'GET', body = null, keepalive = false) {
-            if (!navigator.onLine) throw new Error("Offline"); // PWA 离线拦截
+            if (!navigator.onLine) throw new Error("Offline"); 
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时限制
             
             const options = {
                 method,
+                signal: controller.signal,
                 headers: { "X-Bmob-Application-Id": BMOB_APP_ID, "X-Bmob-REST-API-Key": BMOB_REST_KEY, "Content-Type": "application/json" },
                 keepalive: keepalive
             };
             if (body) options.body = JSON.stringify(body);
-            const res = await fetch(`${BMOB_BASE_URL}${path}`, options);
-            const json = await res.json().catch(() => ({}));
             
-            if (!res.ok) {
-                const isNotFound = json.code === 101 || (json.error||'').toLowerCase().includes('not found');
-                if (method === 'GET' && isNotFound) return { results: [] }; 
-                throw new Error(json.error || `HTTP Error ${res.status}`);
+            try {
+                const res = await fetch(`${BMOB_BASE_URL}${path}`, options);
+                clearTimeout(timeoutId);
+                const json = await res.json().catch(() => ({}));
+                
+                if (!res.ok) {
+                    const isNotFound = json.code === 101 || (json.error||'').toLowerCase().includes('not found');
+                    if (method === 'GET' && isNotFound) return { results: [] }; 
+                    throw new Error(json.error || `HTTP Error ${res.status}`);
+                }
+                return json;
+            } catch (err) {
+                clearTimeout(timeoutId);
+                if (err.name === 'AbortError') throw new Error("连接超时，请检查网络或关闭隐私代理");
+                throw err;
             }
-            return json;
         }
 
         // --- 全局状态 ---
@@ -562,7 +500,6 @@ self.addEventListener('push', event => {
             myUserId = localStorage.getItem('wb_uid') || ('u_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5));
             localStorage.setItem('wb_uid', myUserId);
             
-            // PWA 主题色初始化同步
             if(localStorage.getItem('wb_theme')==='dark') {
                 document.documentElement.classList.add('dark');
                 document.getElementById('themeColorMeta').content = '#111827';
@@ -572,21 +509,33 @@ self.addEventListener('push', event => {
             else document.getElementById('loginView').classList.add('active');
         };
 
-        window.verifyAccess = () => {
+        window.verifyAccess = async () => {
             const code = document.getElementById('accessCodeInput').value.trim();
             const nick = document.getElementById('nicknameInput').value.trim();
-            const validCodes = ['wangruizhe', 'gongchenqi', 'luoyinli', '23271081'];
+            const validCodes = ['wangruizhe', 'gongchenqi', 'luoyinli', 'zhanlin'];
             
             if (!code || !nick) return window.showToast("请输入邀请码和昵称");
             if (!validCodes.includes(code)) return window.showToast("邀请码不正确");
             
-            localStorage.setItem('wb_granted', 'true');
-            localStorage.setItem('wb_code', code);
-            localStorage.setItem('wb_nick', nick);
-            unlockApp();
+            const loginBtn = document.querySelector('.login-btn');
+            const originalText = loginBtn.innerText;
+            loginBtn.innerText = "⏳ 正在同步云端...";
+            loginBtn.disabled = true;
+
+            try {
+                localStorage.setItem('wb_granted', 'true');
+                localStorage.setItem('wb_code', code);
+                localStorage.setItem('wb_nick', nick);
+                await unlockApp();
+            } catch (e) {
+                loginBtn.innerText = originalText;
+                loginBtn.disabled = false;
+                window.openConfirm("连接失败", "无法连接到云端：\n" + e.message, null);
+                localStorage.removeItem('wb_granted');
+            }
         };
 
-        function unlockApp() {
+        async function unlockApp() {
             currentAccessCode = localStorage.getItem('wb_code');
             currentNickname = localStorage.getItem('wb_nick');
             document.getElementById('loginView').classList.remove('active');
@@ -596,8 +545,14 @@ self.addEventListener('push', event => {
             if (localData) appData = sanitizeData(JSON.parse(localData));
             
             window.updateStatsUI(); window.renderReviewSelect(); window.initReviewSession();
-            if (navigator.onLine) { startBmobSync(); startBmobPresence(); }
-            else document.getElementById('cloudStatus').innerHTML = "📴 离线模式";
+            
+            if (navigator.onLine) { 
+                // 先验证网络连通性，防止一直转圈
+                await bmobFetch(`/Presence?limit=1`); 
+                startBmobSync(); startBmobPresence(); 
+            } else {
+                document.getElementById('cloudStatus').innerHTML = "📴 离线模式";
+            }
         }
 
         function startBmobSync() {
@@ -618,7 +573,7 @@ self.addEventListener('push', event => {
                             document.getElementById('viewEdit').classList.contains('active') ? window.renderEditAccordions() : (window.renderReviewSelect(), window.renderReviewCard());
                         }
                     } else pushToCloud();
-                } catch(e) { cloudErrorMsg = e.message; statusEl.innerHTML = e.message==="Offline" ? "📴 离线模式" : "⚠️ 连接异常"; }
+                } catch(e) { cloudErrorMsg = e.message; statusEl.innerHTML = e.message.includes("超时")||e.message==="Offline" ? "📴 离线模式" : "⚠️ 连接异常"; }
             }
             pullData();
             if (syncTimer) clearInterval(syncTimer);
@@ -656,7 +611,7 @@ self.addEventListener('push', event => {
                     } else myPresenceObjId = (await bmobFetch(`/Presence`, 'POST', { roomCode: currentAccessCode, userId: myUserId, nick: currentNickname, lastActive: now })).objectId;
 
                     const resRoom = await bmobFetch(`/Presence?where=${encodeURIComponent(JSON.stringify({ roomCode: currentAccessCode }))}`);
-                    const activeUsers = resRoom.results.filter(d => (now - d.lastActive) < 3000); // 放宽至 3 秒避免抖动
+                    const activeUsers = resRoom.results.filter(d => (now - d.lastActive) < 3000);
                     document.getElementById('presenceList').innerHTML = `<div style="width:100%;text-align:center;font-size:0.8rem;color:var(--text-muted);margin-bottom:0.3rem;">👥 正在房间：</div>` + 
                         (activeUsers.map(d => `<div class="user-presence"><span class="status-dot online"></span>${d.nick}</div>`).join('') || '<div style="color:var(--text-muted); font-size:0.8rem;">房间暂时没有其他人</div>');
                 } catch(e) {}
@@ -675,7 +630,7 @@ self.addEventListener('push', event => {
             document.getElementById('btnMode' + (m==='review'?'Review':'Edit')).classList.add('active');
             document.getElementById('view' + (m==='review'?'Review':'Edit')).classList.add('active');
             if(m==='edit') window.renderEditAccordions(); else { window.renderReviewSelect(); window.initReviewSession(); }
-            window.scrollTo({top: 0, behavior: 'smooth'}); // PWA: 切换视图时回到顶部
+            window.scrollTo({top: 0, behavior: 'smooth'});
         };
 
         window.speak = (t, e) => {
@@ -795,7 +750,7 @@ self.addEventListener('push', event => {
             
             document.getElementById('en_'+lid).value = ''; document.getElementById('zh_'+lid).value = ''; document.getElementById('note_'+lid).value = '';
             saveLocal(); pushToCloud(); window.renderEditAccordions();
-            setTimeout(() => { const i = document.getElementById(`en_${lid}`); if (i) i.focus(); }, 0); // 移动端自动聚焦保持键盘唤起
+            setTimeout(() => { const i = document.getElementById(`en_${lid}`); if (i) i.focus(); }, 0);
         };
 
         window.delWord = (id) => { 
@@ -823,7 +778,6 @@ self.addEventListener('push', event => {
         window.toggleTheme = () => { 
             const d = document.documentElement.classList.toggle('dark'); 
             localStorage.setItem('wb_theme', d?'dark':'light'); 
-            // 动态修改 PWA 状态栏颜色
             document.getElementById('themeColorMeta').content = d ? '#111827' : '#F3F4F6';
         };
         
