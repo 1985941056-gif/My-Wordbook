@@ -63,7 +63,7 @@
         }
         :root.dark .list-select, :root.dark .search-container input, :root.dark .accordion-body, 
         :root.dark .add-word-form input, :root.dark .add-word-form textarea, 
-        :root.dark #promptModalInput { 
+        :root.dark #promptModalInput, :root.dark #editWordEn, :root.dark #editWordZh, :root.dark #editWordNote { 
             background-color: #374151; color: var(--text-main); border-color: var(--border-color);
         }
 
@@ -200,6 +200,12 @@
         .add-word-form textarea { padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 10px; outline: none; resize: vertical; min-height: 70px; font-family: inherit; }
         
         .edit-word-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 1rem; border-bottom: 1px solid var(--border-color); }
+        
+        /* 修改点：给词块增加手型和点击效果 */
+        .edit-word-info { flex: 1; cursor: pointer; padding-right: 1rem; transition: opacity 0.2s; }
+        .edit-word-info:hover { opacity: 0.8; }
+        .edit-word-info:active { opacity: 0.5; }
+        
         .edit-word-info b { display: block; font-size: 1.1rem; color: var(--text-main); }
         .edit-word-info small { color: var(--text-muted); display: block; margin-top: 0.3rem; line-height: 1.4; white-space: pre-wrap; }
 
@@ -264,6 +270,24 @@
         </div>
     </div>
     
+    <!-- 新增：单词编辑弹窗 -->
+    <div id="editWordModal" class="modal-overlay" onclick="window.closeEditWordModalOnBg(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 id="editWordModalTitle">📝 编辑单词</h3>
+            <div class="add-word-form" style="border: none; padding: 0; background: transparent; margin: 1rem 0;">
+                <div class="input-row">
+                    <input id="editWordEn" class="login-input" style="padding: 0.8rem; font-size: 1rem; text-align: left;" placeholder="英文单词">
+                    <input id="editWordZh" class="login-input" style="padding: 0.8rem; font-size: 1rem; text-align: left;" placeholder="中文释义">
+                </div>
+                <textarea id="editWordNote" class="login-input" style="padding: 0.8rem; font-size: 1rem; text-align: left; resize: vertical; min-height: 80px; margin-top: 0.8rem; width: 100%; border-radius: 14px;" placeholder="补充笔记或例句 (可选)..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-neutral" onclick="window.closeEditWordModal()">取消</button>
+                <button class="btn-primary" onclick="window.submitEditWord()">保存修改</button>
+            </div>
+        </div>
+    </div>
+
     <!-- PWA 配置提取弹窗 -->
     <div id="pwaModal" class="modal-overlay" onclick="window.closePwaModalOnBg(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
@@ -495,6 +519,74 @@
             window.openConfirm("云端排查", "状态：" + statusText + "\n" + (cloudErrorMsg ? "报错：" + cloudErrorMsg : "💡 提示：云同步正常运行中。若离线也可继续背单词！"), null);
         };
 
+        // --- 新增：单词编辑弹窗逻辑 ---
+        let editingWordId = null;
+
+        window.openEditWordModal = (id) => {
+            const wordObj = appData.words.find(w => w.id === id);
+            if (!wordObj) return;
+            
+            editingWordId = id;
+            document.getElementById('editWordEn').value = wordObj.word;
+            document.getElementById('editWordZh').value = wordObj.meaning;
+            document.getElementById('editWordNote').value = wordObj.note || '';
+            
+            document.getElementById('editWordModal').classList.add('active');
+        };
+
+        window.closeEditWordModal = () => {
+            document.getElementById('editWordModal').classList.remove('active');
+            editingWordId = null;
+        };
+        
+        window.closeEditWordModalOnBg = (e) => { 
+            if(e.target.id === 'editWordModal') window.closeEditWordModal(); 
+        };
+
+        window.submitEditWord = () => {
+            if (!editingWordId) return;
+            
+            const newEn = document.getElementById('editWordEn').value.trim();
+            const newZh = document.getElementById('editWordZh').value.trim();
+            const newNote = document.getElementById('editWordNote').value.trim();
+            
+            if (!newEn || !newZh) return window.showToast("单词和释义不能为空");
+            
+            const wordIndex = appData.words.findIndex(w => w.id === editingWordId);
+            if (wordIndex !== -1) {
+                // 更新单词内容
+                appData.words[wordIndex].word = newEn;
+                appData.words[wordIndex].meaning = newZh;
+                appData.words[wordIndex].note = newNote;
+                
+                saveLocal(); 
+                pushToCloud();
+                
+                // 判断当前是在搜索结果视图还是正常列表视图，并对应刷新
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput && searchInput.value) {
+                    window.handleSearchInput({target: searchInput});
+                } else {
+                    window.renderEditAccordions();
+                }
+                
+                // 如果恰好正在复习这个词，也需要更新队列（可选）
+                const queueIndex = reviewQueue.findIndex(w => w.id === editingWordId);
+                if (queueIndex !== -1) {
+                    reviewQueue[queueIndex].word = newEn;
+                    reviewQueue[queueIndex].meaning = newZh;
+                    reviewQueue[queueIndex].note = newNote;
+                    // 如果正在复习当前的词，刷新卡片
+                    if(queueIndex === 0 && document.getElementById('viewReview').classList.contains('active')){
+                        window.renderReviewCard();
+                    }
+                }
+                
+                window.showToast("✅ 修改成功");
+            }
+            window.closeEditWordModal();
+        };
+
         // --- 初始化入口 ---
         window.onload = () => {
             myUserId = localStorage.getItem('wb_uid') || ('u_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5));
@@ -650,9 +742,11 @@
             if (!q) { resArea.style.display = 'none'; accArea.style.display = 'block'; return; }
             resArea.style.display = 'block'; accArea.style.display = 'none';
             const matched = appData.words.filter(w => (/^[a-z\s]+$/.test(q) ? w.word.toLowerCase().startsWith(q) : w.meaning.toLowerCase().includes(q)));
+            
+            // 给搜索结果中的词块增加点击打开编辑弹窗的事件
             resArea.innerHTML = matched.map(w => `
                 <div class="edit-word-item" style="background:var(--card-bg); border-radius:16px; margin-bottom:0.8rem; border:1px solid var(--border-color); padding:1.2rem;">
-                    <div class="edit-word-info"><b>${w.word}</b><span>${w.meaning}</span>${w.note?`<small>${w.note}</small>`:''}</div>
+                    <div class="edit-word-info" onclick="window.openEditWordModal(${w.id})"><b>${w.word}</b><span>${w.meaning}</span>${w.note?`<small>${w.note}</small>`:''}</div>
                     <button class="logout-btn" style="position:static; color:var(--danger-color); font-size:1.6rem; padding:0.5rem;" onclick="window.delWord(${w.id})">×</button>
                 </div>
             `).join('') || '<div style="text-align:center; padding:3rem; color:gray;">无结果</div>';
@@ -722,7 +816,8 @@
                         </div>
                         ${words.map(w => `
                             <div class="edit-word-item">
-                                <div class="edit-word-info"><b>${w.word}</b><span>${w.meaning}</span>${w.note?`<small>${w.note}</small>`:''}</div>
+                                <!-- 给词块增加点击打开编辑弹窗的事件 -->
+                                <div class="edit-word-info" onclick="window.openEditWordModal(${w.id})"><b>${w.word}</b><span>${w.meaning}</span>${w.note?`<small>${w.note}</small>`:''}</div>
                                 <button class="logout-btn" style="position:static; color:var(--danger-color); font-size:1.6rem;" onclick="window.delWord(${w.id})">×</button>
                             </div>
                         `).join('')}
