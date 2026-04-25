@@ -10,13 +10,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="极简单词">
     
-    <!-- 🍎 明确指定 iOS 高清图标 (关键修复) 🍎 -->
+    <!-- 🍎 明确指定 iOS 高清图标 -->
     <link rel="apple-touch-icon" href="./icon.png">
     
     <!-- 动态注入 Manifest -->
     <link rel="manifest" id="manifestLink" href="">
     
-    <title>极简单词本</title>
+    <title>个人云词库</title>
     <style>
         /* ================= 基础全局样式 ================= */
         :root {
@@ -116,15 +116,16 @@
         }
         #loginView.active { display: flex; }
         .login-title { font-size: 1.8rem; font-weight: 800; }
+        .login-desc { color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; margin-bottom: 0.5rem; }
         .login-input {
-            width: 100%; padding: 0.9rem; border: 2px solid var(--border-color);
+            width: 100%; padding: 1rem; border: 2px solid var(--border-color);
             border-radius: 14px; text-align: center; outline: none; transition: 0.2s;
         }
         .login-input:focus { border-color: var(--primary-color); box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
         .login-btn {
             width: 100%; padding: 1rem; border: none; border-radius: 14px;
             background-color: var(--primary-color); color: white; font-size: 1.1rem;
-            font-weight: 700; cursor: pointer; transition: 0.2s;
+            font-weight: 700; cursor: pointer; transition: 0.2s; margin-top: 0.5rem;
         }
         .login-btn:active { background-color: var(--primary-hover); transform: translateY(2px); }
 
@@ -137,17 +138,6 @@
         .stats-board { display: flex; justify-content: center; gap: 0.8rem; margin-top: 1rem; font-size: 0.85rem; }
         .stat-item { background: var(--card-bg); padding: 0.5rem 1.2rem; border-radius: 999px; border: 1px solid var(--border-color); box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; transition: 0.2s; }
         
-        .presence-list {
-            display: flex; justify-content: center; flex-wrap: wrap; gap: 0.6rem;
-            margin-top: 1.5rem; padding: 0.8rem; background-color: var(--card-bg);
-            border-radius: 16px; border: 1px solid var(--border-color); min-height: 48px;
-        }
-        .user-presence { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; padding: 0.3rem 0.7rem; background: var(--bg-color); border-radius: 8px; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
-        .status-dot.online { background: var(--success-color); box-shadow: 0 0 8px var(--success-color); animation: pulse-online 2s infinite; }
-
-        @keyframes pulse-online { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-
         /* --- 模式切换 (PWA 响应式：移动端吸底) --- */
         .mode-toggle { display: flex; background: #E5E7EB; padding: 0.3rem; border-radius: 16px; margin: 2rem 0; transition: all 0.3s ease; }
         .mode-btn { flex: 1; padding: 0.85rem; border: none; background: transparent; border-radius: 13px; cursor: pointer; font-weight: 700; transition: 0.2s; color: var(--text-muted); }
@@ -201,7 +191,6 @@
         
         .edit-word-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 1rem; border-bottom: 1px solid var(--border-color); }
         
-        /* 修改点：给词块增加手型和点击效果 */
         .edit-word-info { flex: 1; cursor: pointer; padding-right: 1rem; transition: opacity 0.2s; }
         .edit-word-info:hover { opacity: 0.8; }
         .edit-word-info:active { opacity: 0.5; }
@@ -270,7 +259,7 @@
         </div>
     </div>
     
-    <!-- 新增：单词编辑弹窗 -->
+    <!-- 单词编辑弹窗 -->
     <div id="editWordModal" class="modal-overlay" onclick="window.closeEditWordModalOnBg(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <h3 id="editWordModalTitle">📝 编辑单词</h3>
@@ -302,10 +291,9 @@
     <!-- 登录界面 -->
     <div id="loginView">
         <div style="text-align:right;"><button class="login-theme-btn" onclick="window.toggleTheme()">🌙</button></div>
-        <div class="login-title">💡 协作词库</div>
-        <div class="login-desc">输入房间邀请码与昵称开始同步</div>
-        <input type="password" id="accessCodeInput" class="login-input" placeholder="邀请码 (如: 8888)" autocomplete="off">
-        <input type="text" id="nicknameInput" class="login-input" placeholder="您的昵称" autocomplete="off" onkeypress="if(event.key==='Enter') window.verifyAccess()">
+        <div class="login-title">☁️ 个人云同步</div>
+        <div class="login-desc">设置一个你的专属同步码<br>在多设备上输入该码即可互通数据</div>
+        <input type="text" id="syncCodeInput" class="login-input" placeholder="设置同步码 (如 my_apple_666)" autocomplete="off" onkeypress="if(event.key==='Enter') window.verifyAccess()">
         <button class="login-btn" onclick="window.verifyAccess()">进入学习空间</button>
     </div>
 
@@ -327,8 +315,6 @@
                 <div class="stat-item">词库: <b id="statTotal">0</b></div>
                 <div class="stat-item">今日: <b id="statToday">0</b></div>
             </div>
-
-            <div class="presence-list" id="presenceList"></div>
         </header>
 
         <div class="mode-toggle">
@@ -361,25 +347,20 @@
     <!-- JS 逻辑 -->
     <script>
         // =====================================================================
-        // 🚀 PWA 核心引擎注入 (Manifest & Service Worker)
+        // 🚀 PWA 核心引擎注入
         // =====================================================================
-        
-        // 动态生成 Manifest JSON (强制使用您上传的 icon.png)
         const manifestData = {
-            "name": "极简单词本 - 协作与记忆",
+            "name": "极简单词本 - 个人云同步",
             "short_name": "极简单词",
-            "description": "极简风格的协作与个人单词记忆 PWA 应用",
+            "description": "极简风格的跨设备单词记忆 PWA 应用",
             "start_url": "./",
             "display": "standalone",
             "background_color": "#F3F4F6",
             "theme_color": "#4F46E5",
             "icons": [{ "src": "./icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
         };
-        
-        // 注入到 DOM
         document.getElementById('manifestLink').href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifestData));
 
-        // 注册 Service Worker 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js').catch(() => {
@@ -388,7 +369,6 @@
             });
         }
 
-        // PWA 安装事件拦截
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
@@ -413,7 +393,6 @@
         window.closePwaModal = () => document.getElementById('pwaModal').classList.remove('active');
         window.closePwaModalOnBg = (e) => { if(e.target.id === 'pwaModal') window.closePwaModal(); };
 
-        // 网络状态监听
         window.addEventListener('offline', () => {
             document.getElementById('cloudStatus').innerHTML = "📴 离线模式";
             window.showToast("已断开网络，切换至本地离线模式");
@@ -421,11 +400,11 @@
         window.addEventListener('online', () => {
             document.getElementById('cloudStatus').innerHTML = "🔄 重新连接...";
             window.showToast("网络已恢复");
-            if (currentAccessCode) startBmobSync(); 
+            if (currentSyncCode) startBmobSync(); 
         });
 
         // =====================================================================
-        // 🚀 Bmob 云端引擎 (加入离线容错与超时防护)
+        // 🚀 Bmob 云端引擎 (单人数据同步版本)
         // =====================================================================
         const BMOB_APP_ID = "4bf7d211a09a4c0b4ed139f0e90bc806";
         const BMOB_REST_KEY = "7d5ac1ddbf2694de6a23843fd1814ad0";
@@ -435,7 +414,7 @@
             if (!navigator.onLine) throw new Error("Offline"); 
             
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时限制
+            const timeoutId = setTimeout(() => controller.abort(), 10000); 
             
             const options = {
                 method,
@@ -464,21 +443,19 @@
         }
 
         // --- 全局状态 ---
-        let currentAccessCode = ""; let currentNickname = ""; let myUserId = ""; let myPresenceObjId = null;
-        let appData = { lists: [{id:'default', name:'默认分组'}], words: [], activeListId: 'default', stats: { date: '', reviewedCount: 0 } };
+        let currentSyncCode = ""; 
+        let currentActiveListId = 'default';
+        let appData = { lists: [{id:'default', name:'默认分组'}], words: [], stats: { date: '', reviewedCount: 0 } };
+        
         let reviewQueue = []; let expandedListId = null; let cloudErrorMsg = ""; 
-        let isPushingData = false; let syncTimer = null; let presenceTimer = null;
-
-        window.addEventListener('pagehide', () => {
-            if (myPresenceObjId && navigator.onLine) bmobFetch(`/Presence/${myPresenceObjId}`, 'DELETE', null, true).catch(() => {});
-        });
+        let isPushingData = false; let syncTimer = null;
 
         function sanitizeData(data) {
             if (!data) data = {};
             if (!data.lists || !Array.isArray(data.lists) || data.lists.length === 0) data.lists = [{id:'default', name:'默认分组'}];
             if (!data.words || !Array.isArray(data.words)) data.words = [];
             if (!data.stats) data.stats = { date: '', reviewedCount: 0 };
-            if (!data.activeListId) data.activeListId = data.lists[0].id;
+            delete data.activeListId; 
             return data;
         }
 
@@ -519,9 +496,8 @@
             window.openConfirm("云端排查", "状态：" + statusText + "\n" + (cloudErrorMsg ? "报错：" + cloudErrorMsg : "💡 提示：云同步正常运行中。若离线也可继续背单词！"), null);
         };
 
-        // --- 新增：单词编辑弹窗逻辑 ---
+        // --- 单词编辑弹窗逻辑 ---
         let editingWordId = null;
-
         window.openEditWordModal = (id) => {
             const wordObj = appData.words.find(w => w.id === id);
             if (!wordObj) return;
@@ -533,19 +509,11 @@
             
             document.getElementById('editWordModal').classList.add('active');
         };
-
-        window.closeEditWordModal = () => {
-            document.getElementById('editWordModal').classList.remove('active');
-            editingWordId = null;
-        };
-        
-        window.closeEditWordModalOnBg = (e) => { 
-            if(e.target.id === 'editWordModal') window.closeEditWordModal(); 
-        };
+        window.closeEditWordModal = () => { document.getElementById('editWordModal').classList.remove('active'); editingWordId = null; };
+        window.closeEditWordModalOnBg = (e) => { if(e.target.id === 'editWordModal') window.closeEditWordModal(); };
 
         window.submitEditWord = () => {
             if (!editingWordId) return;
-            
             const newEn = document.getElementById('editWordEn').value.trim();
             const newZh = document.getElementById('editWordZh').value.trim();
             const newNote = document.getElementById('editWordNote').value.trim();
@@ -554,34 +522,25 @@
             
             const wordIndex = appData.words.findIndex(w => w.id === editingWordId);
             if (wordIndex !== -1) {
-                // 更新单词内容
                 appData.words[wordIndex].word = newEn;
                 appData.words[wordIndex].meaning = newZh;
                 appData.words[wordIndex].note = newNote;
                 
-                saveLocal(); 
-                pushToCloud();
+                saveLocal(); pushToCloud();
                 
-                // 判断当前是在搜索结果视图还是正常列表视图，并对应刷新
                 const searchInput = document.getElementById('searchInput');
-                if (searchInput && searchInput.value) {
-                    window.handleSearchInput({target: searchInput});
-                } else {
-                    window.renderEditAccordions();
-                }
+                if (searchInput && searchInput.value) window.handleSearchInput({target: searchInput});
+                else window.renderEditAccordions();
                 
-                // 如果恰好正在复习这个词，也需要更新队列（可选）
                 const queueIndex = reviewQueue.findIndex(w => w.id === editingWordId);
                 if (queueIndex !== -1) {
                     reviewQueue[queueIndex].word = newEn;
                     reviewQueue[queueIndex].meaning = newZh;
                     reviewQueue[queueIndex].note = newNote;
-                    // 如果正在复习当前的词，刷新卡片
                     if(queueIndex === 0 && document.getElementById('viewReview').classList.contains('active')){
                         window.renderReviewCard();
                     }
                 }
-                
                 window.showToast("✅ 修改成功");
             }
             window.closeEditWordModal();
@@ -589,9 +548,6 @@
 
         // --- 初始化入口 ---
         window.onload = () => {
-            myUserId = localStorage.getItem('wb_uid') || ('u_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5));
-            localStorage.setItem('wb_uid', myUserId);
-            
             if(localStorage.getItem('wb_theme')==='dark') {
                 document.documentElement.classList.add('dark');
                 document.getElementById('themeColorMeta').content = '#111827';
@@ -602,22 +558,18 @@
         };
 
         window.verifyAccess = async () => {
-            const code = document.getElementById('accessCodeInput').value.trim();
-            const nick = document.getElementById('nicknameInput').value.trim();
-            const validCodes = ['wangruizhe', 'gongchenqi', 'luoyinli', 'zhanlin'];
-            
-            if (!code || !nick) return window.showToast("请输入邀请码和昵称");
-            if (!validCodes.includes(code)) return window.showToast("邀请码不正确");
+            const code = document.getElementById('syncCodeInput').value.trim();
+            if (!code) return window.showToast("请输入您的专属同步码");
+            if (code.length < 3) return window.showToast("同步码太短啦，多加几位更安全哦");
             
             const loginBtn = document.querySelector('.login-btn');
             const originalText = loginBtn.innerText;
-            loginBtn.innerText = "⏳ 正在同步云端...";
+            loginBtn.innerText = "⏳ 正在连接云端...";
             loginBtn.disabled = true;
 
             try {
                 localStorage.setItem('wb_granted', 'true');
                 localStorage.setItem('wb_code', code);
-                localStorage.setItem('wb_nick', nick);
                 await unlockApp();
             } catch (e) {
                 loginBtn.innerText = originalText;
@@ -628,20 +580,29 @@
         };
 
         async function unlockApp() {
-            currentAccessCode = localStorage.getItem('wb_code');
-            currentNickname = localStorage.getItem('wb_nick');
+            currentSyncCode = localStorage.getItem('wb_code');
             document.getElementById('loginView').classList.remove('active');
             document.getElementById('appContent').classList.add('active');
             
             const localData = localStorage.getItem('wb_data');
-            if (localData) appData = sanitizeData(JSON.parse(localData));
+            if (localData) {
+                const parsed = JSON.parse(localData);
+                if (parsed.activeListId) { 
+                    currentActiveListId = parsed.activeListId;
+                    localStorage.setItem('wb_active_list', currentActiveListId);
+                } else {
+                    currentActiveListId = localStorage.getItem('wb_active_list') || (parsed.lists && parsed.lists.length > 0 ? parsed.lists[0].id : 'default');
+                }
+                appData = sanitizeData(parsed);
+                saveLocal(); 
+            } else {
+                currentActiveListId = localStorage.getItem('wb_active_list') || 'default';
+            }
             
             window.updateStatsUI(); window.renderReviewSelect(); window.initReviewSession();
             
             if (navigator.onLine) { 
-                // 先验证网络连通性，防止一直转圈
-                await bmobFetch(`/Presence?limit=1`); 
-                startBmobSync(); startBmobPresence(); 
+                startBmobSync(); 
             } else {
                 document.getElementById('cloudStatus').innerHTML = "📴 离线模式";
             }
@@ -653,7 +614,8 @@
             async function pullData() {
                 if (isPushingData || !navigator.onLine) return;
                 try {
-                    const queryObj = { roomCode: currentAccessCode };
+                    // 为了向下兼容用户原有的老数据，我们继续将同步码对应到Bmob库原有的 roomCode 字段查询
+                    const queryObj = { roomCode: currentSyncCode };
                     const res = await bmobFetch(`/RoomData?where=${encodeURIComponent(JSON.stringify(queryObj))}`);
                     
                     statusEl.innerHTML = "☁️ 云端同步"; cloudErrorMsg = "";
@@ -661,6 +623,13 @@
                         const cloudDataStr = res.results[0].dataStr;
                         if (cloudDataStr !== JSON.stringify(appData)) {
                             appData = sanitizeData(JSON.parse(cloudDataStr));
+                            
+                            if (!appData.lists.find(l => l.id === currentActiveListId)) {
+                                currentActiveListId = appData.lists.length > 0 ? appData.lists[0].id : 'default';
+                                localStorage.setItem('wb_active_list', currentActiveListId);
+                                window.initReviewSession();
+                            }
+
                             saveLocal(); window.updateStatsUI();
                             document.getElementById('viewEdit').classList.contains('active') ? window.renderEditAccordions() : (window.renderReviewSelect(), window.renderReviewCard());
                         }
@@ -673,44 +642,19 @@
         }
 
         async function pushToCloud() {
-            if (!currentAccessCode || !navigator.onLine) return;
+            if (!currentSyncCode || !navigator.onLine) return;
             isPushingData = true;
             try {
                 const dataStr = JSON.stringify(appData);
-                const queryObj = { roomCode: currentAccessCode };
+                const queryObj = { roomCode: currentSyncCode };
                 const res = await bmobFetch(`/RoomData?where=${encodeURIComponent(JSON.stringify(queryObj))}`);
                 
                 if (res.results && res.results.length > 0) {
                     try { await bmobFetch(`/RoomData/${res.results[0].objectId}`, 'PUT', { dataStr }); } 
-                    catch (err) { if ((err.message||'').includes('not found')) await bmobFetch(`/RoomData`, 'POST', { roomCode: currentAccessCode, dataStr }); }
-                } else await bmobFetch(`/RoomData`, 'POST', { roomCode: currentAccessCode, dataStr });
+                    catch (err) { if ((err.message||'').includes('not found')) await bmobFetch(`/RoomData`, 'POST', { roomCode: currentSyncCode, dataStr }); }
+                } else await bmobFetch(`/RoomData`, 'POST', { roomCode: currentSyncCode, dataStr });
             } catch(e) { console.error(e); } 
             finally { setTimeout(() => { isPushingData = false; }, 1000); }
-        }
-
-        function startBmobPresence() {
-            async function heartbeat() {
-                if (!navigator.onLine) return;
-                try {
-                    const now = Date.now();
-                    const queryMe = { roomCode: currentAccessCode, userId: myUserId };
-                    const resMe = await bmobFetch(`/Presence?where=${encodeURIComponent(JSON.stringify(queryMe))}`);
-                    
-                    if (resMe.results && resMe.results.length > 0) {
-                        myPresenceObjId = resMe.results[0].objectId;
-                        try { await bmobFetch(`/Presence/${myPresenceObjId}`, 'PUT', { nick: currentNickname, lastActive: now }); } 
-                        catch (err) { if ((err.message||'').includes('not found')) myPresenceObjId = (await bmobFetch(`/Presence`, 'POST', { roomCode: currentAccessCode, userId: myUserId, nick: currentNickname, lastActive: now })).objectId; }
-                    } else myPresenceObjId = (await bmobFetch(`/Presence`, 'POST', { roomCode: currentAccessCode, userId: myUserId, nick: currentNickname, lastActive: now })).objectId;
-
-                    const resRoom = await bmobFetch(`/Presence?where=${encodeURIComponent(JSON.stringify({ roomCode: currentAccessCode }))}`);
-                    const activeUsers = resRoom.results.filter(d => (now - d.lastActive) < 3000);
-                    document.getElementById('presenceList').innerHTML = `<div style="width:100%;text-align:center;font-size:0.8rem;color:var(--text-muted);margin-bottom:0.3rem;">👥 正在房间：</div>` + 
-                        (activeUsers.map(d => `<div class="user-presence"><span class="status-dot online"></span>${d.nick}</div>`).join('') || '<div style="color:var(--text-muted); font-size:0.8rem;">房间暂时没有其他人</div>');
-                } catch(e) {}
-            }
-            heartbeat();
-            if (presenceTimer) clearInterval(presenceTimer);
-            presenceTimer = setInterval(heartbeat, 1500);
         }
 
         // =====================================================================
@@ -743,7 +687,6 @@
             resArea.style.display = 'block'; accArea.style.display = 'none';
             const matched = appData.words.filter(w => (/^[a-z\s]+$/.test(q) ? w.word.toLowerCase().startsWith(q) : w.meaning.toLowerCase().includes(q)));
             
-            // 给搜索结果中的词块增加点击打开编辑弹窗的事件
             resArea.innerHTML = matched.map(w => `
                 <div class="edit-word-item" style="background:var(--card-bg); border-radius:16px; margin-bottom:0.8rem; border:1px solid var(--border-color); padding:1.2rem;">
                     <div class="edit-word-info" onclick="window.openEditWordModal(${w.id})"><b>${w.word}</b><span>${w.meaning}</span>${w.note?`<small>${w.note}</small>`:''}</div>
@@ -754,7 +697,7 @@
 
         window.renderReviewCard = () => {
             const area = document.getElementById('reviewContainer');
-            const currentListWords = appData.words.filter(w => w.listId === appData.activeListId);
+            const currentListWords = appData.words.filter(w => w.listId === currentActiveListId);
             
             if (!currentListWords.length) { area.innerHTML = "<div style='text-align:center; padding:4rem 2rem; color:var(--text-muted); background:var(--card-bg); border-radius:28px;'><h2>列表暂无单词</h2><p style='margin-top:1rem;'>请去编辑模式添加单词吧！</p></div>"; return; }
             if (!reviewQueue.length) { area.innerHTML = "<div style='text-align:center; padding:4rem 2rem; color:var(--text-muted); background:var(--card-bg); border-radius:28px;'><h2>🎉 复习完毕</h2><p style='margin-top:1rem;'>当前分组已全部掌握。</p><button class='btn-primary' style='margin-top:2rem;' onclick='window.initReviewSession()'>重新复习</button></div>"; return; }
@@ -816,7 +759,6 @@
                         </div>
                         ${words.map(w => `
                             <div class="edit-word-item">
-                                <!-- 给词块增加点击打开编辑弹窗的事件 -->
                                 <div class="edit-word-info" onclick="window.openEditWordModal(${w.id})"><b>${w.word}</b><span>${w.meaning}</span>${w.note?`<small>${w.note}</small>`:''}</div>
                                 <button class="logout-btn" style="position:static; color:var(--danger-color); font-size:1.6rem;" onclick="window.delWord(${w.id})">×</button>
                             </div>
@@ -859,16 +801,28 @@
             if(appData.lists.length <= 1) return window.showToast("至少需要保留一个分组哦"); 
             window.openConfirm("删除分组", "确定要删除该分组及其全部单词吗？不可恢复。", () => {
                 appData.lists = appData.lists.filter(l=>l.id!==id); appData.words = appData.words.filter(w=>w.listId!==id); 
-                if(appData.activeListId === id) appData.activeListId = appData.lists[0].id;
+                
+                if(currentActiveListId === id) {
+                    currentActiveListId = appData.lists[0].id;
+                    localStorage.setItem('wb_active_list', currentActiveListId);
+                }
+                
                 saveLocal(); pushToCloud(); window.renderEditAccordions(); window.renderReviewSelect();
             });
         };
 
         window.toggleAccordion = (id) => { expandedListId = (expandedListId === id ? null : id); window.renderEditAccordions(); };
         window.updateStatsUI = () => { document.getElementById('statTotal').innerText = appData.words.length; document.getElementById('statToday').innerText = (appData.stats.date === new Date().toDateString()) ? appData.stats.reviewedCount : 0; };
-        window.renderReviewSelect = () => { document.getElementById('reviewListSelect').innerHTML = appData.lists.map(l => `<option value="${l.id}" ${l.id===appData.activeListId?'selected':''}>${l.name}</option>`).join(''); };
-        window.handleListChange = (e) => { appData.activeListId = e.target.value; saveLocal(); window.initReviewSession(); };
-        window.initReviewSession = () => { reviewQueue = [...appData.words.filter(w => w.listId === appData.activeListId)]; window.renderReviewCard(); };
+        
+        window.renderReviewSelect = () => { document.getElementById('reviewListSelect').innerHTML = appData.lists.map(l => `<option value="${l.id}" ${l.id===currentActiveListId?'selected':''}>${l.name}</option>`).join(''); };
+        
+        window.handleListChange = (e) => { 
+            currentActiveListId = e.target.value; 
+            localStorage.setItem('wb_active_list', currentActiveListId);
+            window.initReviewSession(); 
+        };
+        
+        window.initReviewSession = () => { reviewQueue = [...appData.words.filter(w => w.listId === currentActiveListId)]; window.renderReviewCard(); };
         
         window.toggleTheme = () => { 
             const d = document.documentElement.classList.toggle('dark'); 
@@ -877,13 +831,13 @@
         };
         
         window.logout = () => { 
-            window.openConfirm("退出登录", "退出后将需要重新输入房间邀请码，确定要退出吗？", async () => {
-                if (myPresenceObjId && navigator.onLine) await bmobFetch(`/Presence/${myPresenceObjId}`, 'DELETE', null, true).catch(() => {});
+            window.openConfirm("退出登录", "退出后将需要重新输入同步码，确定要退出吗？", async () => {
                 localStorage.clear(); location.reload(); 
             });
         };
 
         window.showToast = (m) => { const t = document.getElementById('toast'); t.innerText = m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3000); };
+        
         function saveLocal() { localStorage.setItem('wb_data', JSON.stringify(appData)); }
     </script>
 </body>
