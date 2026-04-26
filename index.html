@@ -138,6 +138,9 @@
         .stats-board { display: flex; justify-content: center; gap: 0.8rem; margin-top: 1rem; font-size: 0.85rem; }
         .stat-item { background: var(--card-bg); padding: 0.5rem 1.2rem; border-radius: 999px; border: 1px solid var(--border-color); box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; transition: 0.2s; }
         
+        .sync-code-display { display: inline-block; font-size: 0.85rem; color: var(--text-muted); background: var(--card-bg); padding: 0.3rem 0.8rem; border-radius: 999px; border: 1px dashed var(--border-color); margin-top: 0.5rem; cursor: pointer; transition: all 0.2s; }
+        .sync-code-display:active { transform: scale(0.95); background: var(--bg-color); }
+
         /* --- 模式切换 (PWA 响应式：移动端吸底) --- */
         .mode-toggle { display: flex; background: #E5E7EB; padding: 0.3rem; border-radius: 16px; margin: 2rem 0; transition: all 0.3s ease; }
         .mode-btn { flex: 1; padding: 0.85rem; border: none; background: transparent; border-radius: 13px; cursor: pointer; font-weight: 700; transition: 0.2s; color: var(--text-muted); }
@@ -302,6 +305,9 @@
         <header>
             <button class="theme-btn" onclick="window.toggleTheme()" style="position:absolute; left:0; top:0;">🌙</button>
             <h1>我的单词本</h1>
+            <div class="sync-code-display" onclick="window.copySyncCode()" title="点击复制同步码">
+                🔑 同步码: <b id="displaySyncCodeStr">---</b> <span style="font-size: 0.75rem; margin-left: 4px;">📋</span>
+            </div>
             <button class="logout-btn" onclick="window.logout()">退出登录</button>
             
             <!-- PWA 专属控制台 -->
@@ -584,6 +590,8 @@
             document.getElementById('loginView').classList.remove('active');
             document.getElementById('appContent').classList.add('active');
             
+            document.getElementById('displaySyncCodeStr').innerText = currentSyncCode;
+            
             const localData = localStorage.getItem('wb_data');
             if (localData) {
                 const parsed = JSON.parse(localData);
@@ -834,6 +842,17 @@
             window.openConfirm("退出登录", "退出后将需要重新输入同步码，确定要退出吗？", async () => {
                 localStorage.clear(); location.reload(); 
             });
+        };
+
+        window.copySyncCode = () => {
+            if (!currentSyncCode) return;
+            const input = document.createElement('input');
+            input.value = currentSyncCode;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            window.showToast("📋 同步码已复制");
         };
 
         window.showToast = (m) => { const t = document.getElementById('toast'); t.innerText = m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3000); };
